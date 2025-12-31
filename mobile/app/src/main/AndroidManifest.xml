@@ -12,6 +12,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Mobile">
         <activity
+            android:name=".ui.temperature.TemperatureActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.camera.CameraActivity"
+            android:exported="false" />
+        <activity
+            android:name=".ui.sensors.SensorsActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
