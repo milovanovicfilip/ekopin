@@ -20,6 +20,7 @@
         <activity
             android:name=".ui.sensors.SensorsActivity"
             android:exported="false" />
+        <activity android:name=".ui.map.MapActivity" />
         <activity
             android:name=".MainActivity"
             android:exported="true">

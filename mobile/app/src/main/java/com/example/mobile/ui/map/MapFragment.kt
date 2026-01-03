@@ -1,4 +1,4 @@
-package com.example.mobile
+package com.example.mobile.ui.map
 
 import android.os.Bundle
 import android.view.LayoutInflater
@@ -6,9 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication
+import com.example.mobile.R
 import com.example.mobile.map.MapGdxApp
 
-class MapFragment : AndroidFragmentApplication(), AndroidFragmentApplication.Callbacks {
+class MapFragment : AndroidFragmentApplication() {
 
     override fun onCreateView(
         inflater: LayoutInflater,

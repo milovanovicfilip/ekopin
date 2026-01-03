@@ -7,6 +7,8 @@ import androidx.appcompat.app.AppCompatActivity
 import com.example.mobile.databinding.ActivityMainBinding
 import com.example.mobile.ui.sensors.SensorsActivity
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication
+import com.example.mobile.ui.map.MapActivity
+import com.example.mobile.ui.map.MapFragment
 
 class MainActivity : AppCompatActivity(), AndroidFragmentApplication.Callbacks {
 
@@ -15,26 +17,15 @@ class MainActivity : AppCompatActivity(), AndroidFragmentApplication.Callbacks {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Use ViewBinding as your main content view
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // Attach the libGDX map fragment into the container (only once)
-        if (savedInstanceState == null) {
-            supportFragmentManager.beginTransaction()
-                // IMPORTANT: this must exist in your activity_main.xml
-                // Make sure you have a FrameLayout with this id.
-                .replace(R.id.gdx_container, MapFragment())
-                .commit()
-        }
-
-        // UI actions (placeholders)
         binding.tileCamera.setOnClickListener {
             Toast.makeText(this, "Kamera", Toast.LENGTH_SHORT).show()
         }
 
         binding.tileMap.setOnClickListener {
-            Toast.makeText(this, "Zemljevid", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, MapActivity::class.java))
         }
 
         binding.tileSettings.setOnClickListener {
@@ -47,7 +38,6 @@ class MainActivity : AppCompatActivity(), AndroidFragmentApplication.Callbacks {
     }
 
     override fun exit() {
-
         finish()
     }
 }
