@@ -11,7 +11,8 @@ import com.example.mobile.data.model.Sensor
 
 class SensorsAdapter(
     private val sensors: List<Sensor>,
-    private val onClick: (Sensor) -> Unit
+    private val onClick: (Sensor) -> Unit,
+    private val onToggle: (Sensor, Boolean) -> Unit
 ) : RecyclerView.Adapter<SensorsAdapter.SensorViewHolder>() {
 
     inner class SensorViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -19,6 +20,7 @@ class SensorsAdapter(
         val range: TextView = view.findViewById(R.id.tvRange)
         val frequency: TextView = view.findViewById(R.id.tvFrequency)
         val location: TextView = view.findViewById(R.id.tvLocation)
+        // Bi mogli naredit da obstaja pogoj če se toti switch sploh prikaže za senzorje, ki tega ne rabijo (npr kamera)
         val enabled: Switch = view.findViewById(R.id.switchEnabled)
     }
 
@@ -35,6 +37,10 @@ class SensorsAdapter(
         holder.frequency.text = sensor.frequency
         holder.location.text = sensor.location
         holder.enabled.isChecked = sensor.enabled
+
+        holder.enabled.setOnCheckedChangeListener { _, isChecked ->
+            onToggle(sensor, isChecked)
+        }
 
         holder.itemView.setOnClickListener {
             onClick(sensor)
