@@ -5,6 +5,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
@@ -15,23 +17,39 @@ import androidx.core.view.WindowInsetsCompat
 import com.example.mobile.databinding.ActivityMainBinding
 import com.example.mobile.ui.camera.CameraActivity
 import com.example.mobile.ui.sensors.SensorsActivity
+import com.example.mobile.util.LocationHelper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.coroutines.CoroutineContext
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), CoroutineScope {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var locationHelper: LocationHelper
 
     private val LOCATION_PERMISSION_REQUEST_CODE = 1001
+    
+    private val handler = Handler(Looper.getMainLooper())
+    private var updateRunnable: Runnable? = null
+    private val dateFormat = SimpleDateFormat("dd.MM.yyyy HH:mm:ss", Locale.getDefault())
+
+    override val coroutineContext: CoroutineContext
+        get() = Dispatchers.Main + Job()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         requestLocationPermission()
 
-        // Ob ustvarjanju je tudi treba naredit da izpiše čas in lokacijo tam čisto spodaj
-        // Pa še nekaj da posodablja čas, tega se mi ni dalo delat :/
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
+        
+        locationHelper = LocationHelper(this)
 
         binding.tileCamera.setOnClickListener {
             val intent = Intent(this, CameraActivity::class.java)
@@ -49,6 +67,32 @@ class MainActivity : AppCompatActivity() {
         binding.tileSensors.setOnClickListener {
             val intent = Intent(this, SensorsActivity::class.java)
             startActivity(intent)
+        }
+        
+        updateTimeAndLocation()
+        startTimeUpdate()
+    }
+
+    private fun startTimeUpdate() {
+        updateRunnable = object : Runnable {
+            override fun run() {
+                updateTimeAndLocation()
+                handler.postDelayed(this, 1000)
+            }
+        }
+        handler.post(updateRunnable!!)
+    }
+    
+    private fun updateTimeAndLocation() {
+        val currentTime = dateFormat.format(Date())
+        binding.tvTime.text = getString(R.string.time_format, currentTime)
+        
+        launch(Dispatchers.IO) {
+            val location = locationHelper.getCurrentLocation()
+            launch(Dispatchers.Main) {
+                val locationStr = locationHelper.formatLocationShort(location)
+                binding.tvLocation.text = getString(R.string.location_format_display, locationStr)
+            }
         }
     }
 
@@ -88,6 +132,7 @@ class MainActivity : AppCompatActivity() {
             LOCATION_PERMISSION_REQUEST_CODE -> {
                 if (grantResults.isNotEmpty() &&
                     grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    updateTimeAndLocation()
                 } else {
                     handlePermissionDenied()
                 }
@@ -104,5 +149,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun handlePermissionDenied() {
+        binding.tvLocation.text = getString(R.string.location_unknown)
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        updateRunnable?.let { handler.removeCallbacks(it) }
     }
 }

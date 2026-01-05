@@ -9,7 +9,9 @@
     <string name="sensors">Senzorji</string>
     <string name="settings">Nastavitve</string>
     <string name="time_unknown">Čas: neznan</string>
+    <string name="time_format">Čas: %1$s</string>
     <string name="location_unknown">Lokacija: neznana</string>
+    <string name="location_format_display">Lokacija: %1$s</string>
     
     <string name="temperature_sensor">Temperaturni senzor</string>
     <string name="current_temperature">Trenutna temperatura:</string>
