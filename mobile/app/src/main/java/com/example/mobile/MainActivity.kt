@@ -3,14 +3,14 @@ package com.example.mobile
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import com.example.mobile.databinding.ActivityMainBinding
 import com.example.mobile.ui.sensors.SensorsActivity
+import com.badlogic.gdx.backends.android.AndroidFragmentApplication
+import com.example.mobile.ui.map.MapActivity
+import com.example.mobile.ui.map.MapFragment
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), AndroidFragmentApplication.Callbacks {
 
     private lateinit var binding: ActivityMainBinding
 
@@ -25,16 +25,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         binding.tileMap.setOnClickListener {
-            Toast.makeText(this, "Zemljevid", Toast.LENGTH_SHORT).show()
+            startActivity(Intent(this, MapActivity::class.java))
         }
 
         binding.tileSettings.setOnClickListener {
-            Toast.makeText(this, "Nastavitvr", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "Nastavitve", Toast.LENGTH_SHORT).show()
         }
 
         binding.tileSensors.setOnClickListener {
-            val intent = Intent(this, SensorsActivity::class.java)
-            startActivity(intent)
+            startActivity(Intent(this, SensorsActivity::class.java))
         }
+    }
+
+    override fun exit() {
+        finish()
     }
 }
