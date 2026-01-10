@@ -1,5 +1,74 @@
 <resources>
     <string name="app_name">Mobile</string>
+
+    <string name="ecopin">EcoPin</string>
+    <string name="status_sensors">Status senzorjev</string>
+    <string name="gps_camera_status">📍 GPS: ❌    📸 Kamera: ❌</string>
+    <string name="camera">Kamera</string>
+    <string name="map">Zemljevid</string>
+    <string name="sensors">Senzorji</string>
+    <string name="settings">Nastavitve</string>
+    <string name="time_unknown">Čas: neznan</string>
+    <string name="time_format">Čas: %1$s</string>
+    <string name="location_unknown">Lokacija: neznana</string>
+    <string name="location_format_display">Lokacija: %1$s</string>
+
+    <string name="temperature_sensor">Temperaturni senzor</string>
+    <string name="current_temperature">Trenutna temperatura:</string>
+    <string name="temperature_unit">°C</string>
+    <string name="last_update">Zadnja posodobitev: %1$s</string>
+    <string name="capture_settings">Nastavitve zajemanja</string>
+    <string name="frequency_label">Frekvenca zajemanja:</string>
+    <string name="temperature_range">Razpon temperature:</string>
+    <string name="min_hint">Min (-20)</string>
+    <string name="max_hint">Max (36)</string>
+    <string name="start_capture">Začni zajemanje</string>
+    <string name="stop_capture">Ustavi zajemanje</string>
+    <string name="back">Nazaj</string>
+    <string name="log_data">Log podatkov:\n</string>
+    <string name="capture_started">Začeto zajemanje temperature vsakih %1$d %2$s</string>
+    <string name="capture_stopped">Ustavljeno zajemanje temperature</string>
+    <string name="log_entry_format">[%1$s] %2$s\n</string>
+    <string name="temperature_log_format">%1$s @ %2$s</string>
+
+    <string name="second">sekund</string>
+    <string name="minute">minut</string>
+    <string name="hour">ur</string>
+
+    <string name="error_reading_values">Napaka pri branju vrednosti</string>
+    <string name="error_temp_range">Minimalna temperatura mora biti manjša od maksimalne</string>
+
+    <string name="temperature">Temperatura</string>
+    <string name="from_to_range">Od -20.00 do 36.00</string>
+    <string name="every_minutes">Vsakih [TODO interval]</string>
+    <string name="capture_on_event">Zajemanje ob dogodku</string>
+    <string name="manual">Ročno</string>
+
+    <string name="camera_capture_button">📷</string>
+    <string name="press_to_capture">Pritisni za zajem slike</string>
+    <string name="capturing_image">Zajemanje slike...</string>
+    <string name="image_captured">Slika zajeta!</string>
+    <string name="last_capture">Zadnji zajem: %1$s</string>
+    <string name="camera_log_title">Log zajetih slik:\n</string>
+    <string name="image_captured_log">Slika zajeta @ %1$s</string>
+
+    <string name="camera_permission_needed">Dovoljenje za kamerco je potrebno</string>
+    <string name="camera_error_start">Napaka pri zagonu kamere: %1$s</string>
+    <string name="camera_error_init">Napaka pri inicializaciji kamere: %1$s</string>
+
+    <string name="sensor_temperature">Temperature</string>
+    <string name="sensor_camera">Camera</string>
+
+    <string name="location_not_available">Lokacija ni na voljo</string>
+    <string name="location_unknown_short">Neznana</string>
+    <string name="location_format">Lat: %1$.6f, Lng: %2$.6f, Accuracy: %3$.1fm</string>
+    <string name="location_format_short">%1$.6f, %2$.6f</string>
+
+    <string name="sensor_log_format">========================================\nSENZOR: %1$s\nČAS: %2$s\nLOKACIJA: %3$s\nVREDNOST: %4$s\n========================================</string>
+    <string name="camera_log_format">========================================\nSENZOR: Camera\nČAS: %1$s\nLOKACIJA: %2$s\nSLIKA: %3$s\nSTATUS: Poslano na obdelavo\n========================================</string>
+    <string name="image_simulation">Zajeta (simulacija obdelave)</string>
+    <string name="message_log_format">========================================\nSPOROČILO: %1$s\nČAS: %2$s\nLOKACIJA: %3$s\n========================================</string>
+    <string name="location_na">N/A</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
 </resources>
