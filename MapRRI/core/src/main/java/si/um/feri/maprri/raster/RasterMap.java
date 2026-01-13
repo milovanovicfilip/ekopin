@@ -9,6 +9,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.maps.MapLayers;
@@ -29,6 +30,9 @@ import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 
 import java.io.IOException;
@@ -56,13 +60,35 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Skin skin;
     private InputMultiplexer multiplexer;
 
+    private SpriteBatch batch;
+    private Texture pinBin;
+    private Texture pinDisposal;
+    private Texture pinRecycle;
+    private Map<String, Texture> iconMap;
+
+    private java.util.List<MapObject> allObjects;
+    private java.util.List<MapObject> poiObjects;
+
+    private float markerBaseSize = 84f;
+    private float markerSizeCurrent = markerBaseSize;
+    private float markerSizeTarget = markerBaseSize;
+    private final float markerSizeMin = 36f;
+    private final float markerSizeMax = 200f;
+    private final float markerSmoothingSpeed = 12f;
+
+    private float targetZoom;
+    private final float minZoom = 0.3f;
+    private final float maxZoom = 2f;
+    private final float zoomStep = 0.34f;
+    private final float pinchStep = 0.05f;
+    private final float scrollZoomMultiplier = 0.15f;
+    private final float zoomSmoothingSpeed = 6f;
 
 
 
-    // center geolocation
+
     private final Geolocation CENTER_GEOLOCATION = new Geolocation(46.557314, 15.637771);
 
-    // test marker
     private final Geolocation MARKER_GEOLOCATION = new Geolocation(46.559070, 15.638100);
 
     @Override
@@ -78,6 +104,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         camera.zoom = 2f;
         camera.update();
 
+        targetZoom = camera.zoom;
+
         touchPosition = new Vector3();
 
         stage = new Stage(new ScreenViewport());
@@ -92,8 +120,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         zoomInButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                camera.zoom -= 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom -= zoomStep;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
             }
         });
 
@@ -103,8 +131,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         zoomOutButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                camera.zoom += 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom += zoomStep;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
             }
         });
 
@@ -116,8 +144,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         InputAdapter scrollProcessor = new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                camera.zoom += amountY * 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom += amountY * scrollZoomMultiplier;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
                 return true;
             }
         };
@@ -131,19 +159,19 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
 
         MapDataService service = new MapDataService();
-        List<MapObject> objects = service.fetchObjects();
+        allObjects = service.fetchObjects();
 
-        System.out.println("Loaded objects: " + objects.size());
+        System.out.println("Loaded objects: " + (allObjects == null ? 0 : allObjects.size()));
 
-        for (MapObject o : objects) {
-            System.out.println(o);
+        if (allObjects != null) {
+            for (MapObject o : allObjects) {
+                System.out.println(o);
+            }
         }
 
         try {
-            //in most cases, geolocation won't be in the center of the tile because tile borders are predetermined (geolocation can be at the corner of a tile)
             ZoomXY centerTile = MapRasterTiles.getTileNumber(CENTER_GEOLOCATION.lat, CENTER_GEOLOCATION.lng, Constants.ZOOM);
             mapTiles = MapRasterTiles.getRasterTileZone(centerTile, Constants.NUM_TILES);
-            //you need the beginning tile (tile on the top left corner) to convert geolocation to a location in pixels.
             beginTile = new ZoomXY(Constants.ZOOM, centerTile.x - ((Constants.NUM_TILES - 1) / 2), centerTile.y - ((Constants.NUM_TILES - 1) / 2));
         } catch (IOException e) {
             e.printStackTrace();
@@ -165,6 +193,19 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         layers.add(layer);
 
         tiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
+
+        batch = new SpriteBatch();
+        pinBin = new Texture("pin-bin.png");
+        pinDisposal = new Texture("pin-disposal.png");
+        pinRecycle = new Texture("pin-recycle.png");
+        iconMap = new HashMap<>();
+        iconMap.put("bin", pinBin);
+        iconMap.put("disposal-site", pinDisposal);
+        iconMap.put("disposal", pinDisposal);
+        iconMap.put("eco-island", pinRecycle);
+        iconMap.put("eco", pinRecycle);
+
+        filterPOIsToMapBounds(allObjects);
     }
 
     @Override
@@ -172,6 +213,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         ScreenUtils.clear(0, 0, 0, 1);
 
         handleInput();
+
+        float tz = MathUtils.clamp(Gdx.graphics.getDeltaTime() * zoomSmoothingSpeed, 0f, 1f);
+        camera.zoom = MathUtils.lerp(camera.zoom, targetZoom, tz);
+        camera.zoom = MathUtils.clamp(camera.zoom, minZoom, maxZoom);
 
         camera.update();
 
@@ -186,13 +231,42 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     }
 
     private void drawMarkers() {
-        Vector2 marker = MapRasterTiles.getPixelPosition(MARKER_GEOLOCATION.lat, MARKER_GEOLOCATION.lng, beginTile.x, beginTile.y);
+        if (beginTile == null || poiObjects == null || poiObjects.isEmpty()) {
+            return;
+        }
 
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.setColor(Color.RED);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.circle(marker.x, marker.y, 10);
-        shapeRenderer.end();
+        markerSizeTarget = MathUtils.clamp(markerBaseSize * camera.zoom, markerSizeMin, markerSizeMax);
+        float t = MathUtils.clamp(Gdx.graphics.getDeltaTime() * markerSmoothingSpeed, 0f, 1f);
+        markerSizeCurrent = MathUtils.lerp(markerSizeCurrent, markerSizeTarget, t);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        for (MapObject o : poiObjects) {
+            Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
+            Texture tex = iconMap.getOrDefault(o.type, pinBin);
+            float size = markerSizeCurrent;
+            batch.draw(tex, pos.x - size / 2f, pos.y - size / 2f, size, size);
+        }
+        batch.end();
+    }
+
+    private void filterPOIsToMapBounds(java.util.List<MapObject> all) {
+        poiObjects = new ArrayList<>();
+        if (all == null || beginTile == null) return;
+
+        int z = Constants.ZOOM;
+        double leftLon = MapRasterTiles.tile2long(beginTile.x, z);
+        double rightLon = MapRasterTiles.tile2long(beginTile.x + Constants.NUM_TILES, z);
+        double topLat = MapRasterTiles.tile2lat(beginTile.y, z);
+        double bottomLat = MapRasterTiles.tile2lat(beginTile.y + Constants.NUM_TILES, z);
+
+        for (MapObject o : all) {
+            if (o.lon >= leftLon && o.lon <= rightLon && o.lat <= topLat && o.lat >= bottomLat) {
+                poiObjects.add(o);
+            }
+        }
+
+        System.out.println("POIs in current map bounds: " + poiObjects.size());
     }
 
     @Override
@@ -200,6 +274,11 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         shapeRenderer.dispose();
         stage.dispose();
         skin.dispose();
+
+        if (batch != null) batch.dispose();
+        if (pinBin != null) pinBin.dispose();
+        if (pinDisposal != null) pinDisposal.dispose();
+        if (pinRecycle != null) pinRecycle.dispose();
 
     }
 
@@ -240,10 +319,11 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     @Override
     public boolean zoom(float initialDistance, float distance) {
         if (initialDistance >= distance)
-            camera.zoom += 0.02;
+            targetZoom += pinchStep;
         else
-            camera.zoom -= 0.02;
-        return false;
+            targetZoom -= pinchStep;
+        targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
+        return true;
     }
 
     @Override
@@ -258,10 +338,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
     private void handleInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            camera.zoom += 0.02;
+            targetZoom += zoomStep * 0.25f;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
-            camera.zoom -= 0.02;
+            targetZoom -= zoomStep * 0.25f;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             camera.translate(-3, 0, 0);
@@ -276,8 +356,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             camera.translate(0, 3, 0);
         }
 
-        camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 2f);
-
+        targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
 
