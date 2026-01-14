@@ -7,6 +7,7 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
@@ -68,6 +69,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Texture pinDisposal;
     private Texture pinRecycle;
     private Texture myLocation;
+    private Texture backgroundTexture;
     private Map<String, Texture> iconMap;
 
     private java.util.List<MapObject> allObjects;
@@ -124,6 +126,13 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         labelStyle.font = font;
         skin.add("default", labelStyle);
 
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0, 0, 0, 0.7f));
+        pixmap.fill();
+        backgroundTexture = new Texture(pixmap);
+        pixmap.dispose();
+        TextureRegionDrawable backgroundDrawable = new TextureRegionDrawable(new TextureRegion(backgroundTexture));
+
         Texture plusTexture = new Texture("plus.png");
         Texture minusTexture = new Texture("minus.png");
 
@@ -152,11 +161,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         stage.addActor(zoomInButton);
         stage.addActor(zoomOutButton);
 
-        // Info panel in bottom left
         infoPanel = new Table();
         infoPanel.setSize(200, 80);
         infoPanel.setPosition(10, 10);
-        // Dark, very transparent background not needed for readability
+        infoPanel.setBackground(backgroundDrawable);
 
         infoLabel = new Label("Kliknite na marker", skin);
         infoLabel.setWrap(true);
@@ -316,6 +324,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         if (pinDisposal != null) pinDisposal.dispose();
         if (pinRecycle != null) pinRecycle.dispose();
         if (myLocation != null) myLocation.dispose();
+        if (backgroundTexture != null) backgroundTexture.dispose();
 
     }
 
@@ -344,7 +353,6 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             }
         }
 
-        // If no marker clicked, clear selection
         selectedPOI = null;
         updateInfoPanel();
         return false;
