@@ -33,6 +33,8 @@ import com.badlogic.gdx.scenes.scene2d.ui.Label;
 import com.badlogic.gdx.scenes.scene2d.ui.Table;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
 import java.util.ArrayList;
@@ -85,6 +87,14 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Image weatherIcon;
     private Label weatherTemp;
     private Texture weatherTexture;
+
+    private Texture buttonBin;
+    private Texture buttonEcoIsland;
+    private Texture buttonDisposalSite;
+    private Texture buttonHidden;
+    private ImageButton binButton;
+    private ImageButton ecoIslandButton;
+    private ImageButton disposalSiteButton;
 
     private float markerBaseSize = 84f;
     private float markerSizeCurrent = markerBaseSize;
@@ -170,6 +180,59 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         stage.addActor(zoomInButton);
         stage.addActor(zoomOutButton);
+
+        buttonBin = new Texture("button-bin.png");
+        buttonEcoIsland = new Texture("button-ecoisland.png");
+        buttonDisposalSite = new Texture("button-disposalsite.png");
+        buttonHidden = new Texture("button-hidden.png");
+
+        binButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonBin)));
+        binButton.setSize(50, 50);
+        binButton.setPosition(Gdx.graphics.getWidth() - 60, 10);
+        binButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                TextureRegionDrawable current = (TextureRegionDrawable) binButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonBin) {
+                    binButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    binButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonBin));
+                }
+            }
+        });
+        stage.addActor(binButton);
+
+        ecoIslandButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonEcoIsland)));
+        ecoIslandButton.setSize(50, 50);
+        ecoIslandButton.setPosition(Gdx.graphics.getWidth() - 120, 10);
+        ecoIslandButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                TextureRegionDrawable current = (TextureRegionDrawable) ecoIslandButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonEcoIsland) {
+                    ecoIslandButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    ecoIslandButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonEcoIsland));
+                }
+            }
+        });
+        stage.addActor(ecoIslandButton);
+
+        disposalSiteButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonDisposalSite)));
+        disposalSiteButton.setSize(50, 50);
+        disposalSiteButton.setPosition(Gdx.graphics.getWidth() - 180, 10);
+        disposalSiteButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                TextureRegionDrawable current = (TextureRegionDrawable) disposalSiteButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonDisposalSite) {
+                    disposalSiteButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    disposalSiteButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonDisposalSite));
+                }
+            }
+        });
+        stage.addActor(disposalSiteButton);
 
         infoPanel = new Table();
         infoPanel.setSize(200, 80);
@@ -357,6 +420,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         if (backgroundTexture != null) backgroundTexture.dispose();
         if (weatherTexture != null) weatherTexture.dispose();
         if (weatherBackgroundTexture != null) weatherBackgroundTexture.dispose();
+        if (buttonBin != null) buttonBin.dispose();
+        if (buttonEcoIsland != null) buttonEcoIsland.dispose();
+        if (buttonDisposalSite != null) buttonDisposalSite.dispose();
+        if (buttonHidden != null) buttonHidden.dispose();
 
     }
 
