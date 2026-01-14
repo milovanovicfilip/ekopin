@@ -27,6 +27,9 @@ import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
@@ -64,10 +67,15 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Texture pinBin;
     private Texture pinDisposal;
     private Texture pinRecycle;
+    private Texture myLocation;
     private Map<String, Texture> iconMap;
 
     private java.util.List<MapObject> allObjects;
     private java.util.List<MapObject> poiObjects;
+
+    private Table infoPanel;
+    private Label infoLabel;
+    private MapObject selectedPOI;
 
     private float markerBaseSize = 84f;
     private float markerSizeCurrent = markerBaseSize;
@@ -109,7 +117,12 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         touchPosition = new Vector3();
 
         stage = new Stage(new ScreenViewport());
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin();
+        BitmapFont font = new BitmapFont();
+        skin.add("default-font", font);
+        Label.LabelStyle labelStyle = new Label.LabelStyle();
+        labelStyle.font = font;
+        skin.add("default", labelStyle);
 
         Texture plusTexture = new Texture("plus.png");
         Texture minusTexture = new Texture("minus.png");
@@ -138,6 +151,19 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         stage.addActor(zoomInButton);
         stage.addActor(zoomOutButton);
+
+        // Info panel in bottom left
+        infoPanel = new Table();
+        infoPanel.setSize(200, 80);
+        infoPanel.setPosition(10, 10);
+        // Dark, very transparent background not needed for readability
+
+        infoLabel = new Label("Kliknite na marker", skin);
+        infoLabel.setWrap(true);
+        infoPanel.add(infoLabel).pad(5).width(190);
+        infoPanel.row();
+
+        stage.addActor(infoPanel);
 
         GestureDetector gd = new GestureDetector(this);
 
@@ -198,6 +224,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         pinBin = new Texture("pin-bin.png");
         pinDisposal = new Texture("pin-disposal.png");
         pinRecycle = new Texture("pin-recycle.png");
+        myLocation = new Texture("my-location.png");
         iconMap = new HashMap<>();
         iconMap.put("bin", pinBin);
         iconMap.put("disposal-site", pinDisposal);
@@ -243,7 +270,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         batch.begin();
         for (MapObject o : poiObjects) {
             Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
-            Texture tex = iconMap.getOrDefault(o.type, pinBin);
+            Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
             float size = markerSizeCurrent;
             batch.draw(tex, pos.x - size / 2f, pos.y - size / 2f, size, size);
         }
@@ -269,6 +296,15 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         System.out.println("POIs in current map bounds: " + poiObjects.size());
     }
 
+    private void updateInfoPanel() {
+        if (selectedPOI != null) {
+            String typeDisplay = selectedPOI.type;
+            infoLabel.setText("Tip: " + typeDisplay + "\nKoordinate: " + String.format("%.6f", selectedPOI.lat) + ", " + String.format("%.6f", selectedPOI.lon));
+        } else {
+            infoLabel.setText("Kliknite na marker");
+        }
+    }
+
     @Override
     public void dispose() {
         shapeRenderer.dispose();
@@ -279,6 +315,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         if (pinBin != null) pinBin.dispose();
         if (pinDisposal != null) pinDisposal.dispose();
         if (pinRecycle != null) pinRecycle.dispose();
+        if (myLocation != null) myLocation.dispose();
 
     }
 
@@ -291,6 +328,25 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
     @Override
     public boolean tap(float x, float y, int count, int button) {
+        Vector3 worldPos = new Vector3(x, y, 0);
+        camera.unproject(worldPos);
+
+        if (poiObjects != null) {
+            for (MapObject poi : poiObjects) {
+                Vector2 pos = MapRasterTiles.getPixelPosition(poi.lat, poi.lon, beginTile.x, beginTile.y);
+                float size = markerSizeCurrent;
+                if (worldPos.x >= pos.x - size / 2 && worldPos.x <= pos.x + size / 2 &&
+                    worldPos.y >= pos.y - size / 2 && worldPos.y <= pos.y + size / 2) {
+                    selectedPOI = poi;
+                    updateInfoPanel();
+                    return true;
+                }
+            }
+        }
+
+        // If no marker clicked, clear selection
+        selectedPOI = null;
+        updateInfoPanel();
         return false;
     }
 
