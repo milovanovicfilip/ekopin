@@ -96,6 +96,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private ImageButton ecoIslandButton;
     private ImageButton disposalSiteButton;
 
+    private boolean binVisible = true;
+    private boolean ecoIslandVisible = true;
+    private boolean disposalSiteVisible = true;
+
     private float markerBaseSize = 84f;
     private float markerSizeCurrent = markerBaseSize;
     private float markerSizeTarget = markerBaseSize;
@@ -192,6 +196,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         binButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                binVisible = !binVisible;
                 TextureRegionDrawable current = (TextureRegionDrawable) binButton.getStyle().imageUp;
                 if (current.getRegion().getTexture() == buttonBin) {
                     binButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
@@ -208,6 +213,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         ecoIslandButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                ecoIslandVisible = !ecoIslandVisible;
                 TextureRegionDrawable current = (TextureRegionDrawable) ecoIslandButton.getStyle().imageUp;
                 if (current.getRegion().getTexture() == buttonEcoIsland) {
                     ecoIslandButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
@@ -224,6 +230,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         disposalSiteButton.addListener(new ClickListener() {
             @Override
             public void clicked(InputEvent event, float x, float y) {
+                disposalSiteVisible = !disposalSiteVisible;
                 TextureRegionDrawable current = (TextureRegionDrawable) disposalSiteButton.getStyle().imageUp;
                 if (current.getRegion().getTexture() == buttonDisposalSite) {
                     disposalSiteButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
@@ -370,10 +377,14 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         batch.setProjectionMatrix(camera.combined);
         batch.begin();
         for (MapObject o : poiObjects) {
-            Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
-            Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
-            float size = markerSizeCurrent;
-            batch.draw(tex, pos.x - size / 2f, pos.y - size / 2f, size, size);
+            if ((o.type.equals("bin") && binVisible) ||
+                (o.type.equals("eco-island") && ecoIslandVisible) ||
+                (o.type.equals("disposal-site") && disposalSiteVisible)) {
+                Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
+                Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
+                float size = markerSizeCurrent;
+                batch.draw(tex, pos.x - size / 2f, pos.y - size / 2f, size, size);
+            }
         }
         batch.end();
     }
@@ -441,13 +452,17 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         if (poiObjects != null) {
             for (MapObject poi : poiObjects) {
-                Vector2 pos = MapRasterTiles.getPixelPosition(poi.lat, poi.lon, beginTile.x, beginTile.y);
-                float size = markerSizeCurrent;
-                if (worldPos.x >= pos.x - size / 2 && worldPos.x <= pos.x + size / 2 &&
-                    worldPos.y >= pos.y - size / 2 && worldPos.y <= pos.y + size / 2) {
-                    selectedPOI = poi;
-                    updateInfoPanel();
-                    return true;
+                if ((poi.type.equals("bin") && binVisible) ||
+                    (poi.type.equals("eco-island") && ecoIslandVisible) ||
+                    (poi.type.equals("disposal-site") && disposalSiteVisible)) {
+                    Vector2 pos = MapRasterTiles.getPixelPosition(poi.lat, poi.lon, beginTile.x, beginTile.y);
+                    float size = markerSizeCurrent;
+                    if (worldPos.x >= pos.x - size / 2 && worldPos.x <= pos.x + size / 2 &&
+                        worldPos.y >= pos.y - size / 2 && worldPos.y <= pos.y + size / 2) {
+                        selectedPOI = poi;
+                        updateInfoPanel();
+                        return true;
+                    }
                 }
             }
         }
