@@ -22,6 +22,7 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ScreenUtils;
@@ -70,6 +71,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Texture pinRecycle;
     private Texture myLocation;
     private Texture backgroundTexture;
+    private Texture weatherBackgroundTexture;
     private Map<String, Texture> iconMap;
 
     private java.util.List<MapObject> allObjects;
@@ -78,6 +80,11 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Table infoPanel;
     private Label infoLabel;
     private MapObject selectedPOI;
+
+    private Table weatherPanel;
+    private Image weatherIcon;
+    private Label weatherTemp;
+    private Texture weatherTexture;
 
     private float markerBaseSize = 84f;
     private float markerSizeCurrent = markerBaseSize;
@@ -126,6 +133,9 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         labelStyle.font = font;
         skin.add("default", labelStyle);
 
+        Label.LabelStyle weatherLabelStyle = new Label.LabelStyle(labelStyle);
+        skin.add("weather", weatherLabelStyle);
+
         Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
         pixmap.setColor(new Color(0, 0, 0, 0.7f));
         pixmap.fill();
@@ -172,6 +182,26 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         infoPanel.row();
 
         stage.addActor(infoPanel);
+
+        weatherTexture = new Texture("day_partial_cloud.png");
+        weatherIcon = new Image(weatherTexture);
+        weatherTemp = new Label("23 C", skin, "weather");
+        weatherPanel = new Table();
+
+        Pixmap weatherPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        weatherPixmap.setColor(new Color(0, 0, 0, 0.7f));
+        weatherPixmap.fill();
+        weatherBackgroundTexture = new Texture(weatherPixmap);
+        weatherPixmap.dispose();
+        TextureRegionDrawable weatherBackground = new TextureRegionDrawable(new TextureRegion(weatherBackgroundTexture));
+        weatherPanel.setBackground(weatherBackground);
+
+        weatherPanel.setSize(100, 80);
+        weatherPanel.setPosition(10, Gdx.graphics.getHeight() - 90);
+        weatherPanel.add(weatherIcon).size(50, 50).row();
+        weatherPanel.add(weatherTemp).padTop(5);
+
+        stage.addActor(weatherPanel);
 
         GestureDetector gd = new GestureDetector(this);
 
@@ -309,7 +339,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             String typeDisplay = selectedPOI.type;
             infoLabel.setText("Tip: " + typeDisplay + "\nKoordinate: " + String.format("%.6f", selectedPOI.lat) + ", " + String.format("%.6f", selectedPOI.lon));
         } else {
-            infoLabel.setText("Kliknite na marker");
+            infoLabel.setText("POI podatki");
         }
     }
 
@@ -325,6 +355,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         if (pinRecycle != null) pinRecycle.dispose();
         if (myLocation != null) myLocation.dispose();
         if (backgroundTexture != null) backgroundTexture.dispose();
+        if (weatherTexture != null) weatherTexture.dispose();
+        if (weatherBackgroundTexture != null) weatherBackgroundTexture.dispose();
 
     }
 
