@@ -7,8 +7,10 @@ import com.badlogic.gdx.InputAdapter;
 import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.OrthographicCamera;
+import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.maps.MapLayers;
@@ -20,15 +22,24 @@ import com.badlogic.gdx.maps.tiled.tiles.StaticTiledMapTile;
 import com.badlogic.gdx.math.MathUtils;
 import com.badlogic.gdx.math.Vector2;
 import com.badlogic.gdx.math.Vector3;
+import com.badlogic.gdx.scenes.scene2d.ui.Image;
 import com.badlogic.gdx.scenes.scene2d.ui.ImageButton;
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable;
 import com.badlogic.gdx.utils.ScreenUtils;
 import com.badlogic.gdx.scenes.scene2d.Stage;
 import com.badlogic.gdx.scenes.scene2d.ui.Skin;
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton;
+import com.badlogic.gdx.scenes.scene2d.ui.Label;
+import com.badlogic.gdx.scenes.scene2d.ui.Table;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.scenes.scene2d.utils.ChangeListener;
+import com.badlogic.gdx.scenes.scene2d.utils.ClickListener;
+import com.badlogic.gdx.scenes.scene2d.InputEvent;
 import com.badlogic.gdx.scenes.scene2d.Actor;
 import com.badlogic.gdx.utils.viewport.ScreenViewport;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 
 import java.io.IOException;
@@ -56,13 +67,59 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Skin skin;
     private InputMultiplexer multiplexer;
 
+    private SpriteBatch batch;
+    private Texture pinBin;
+    private Texture pinDisposal;
+    private Texture pinRecycle;
+    private Texture myLocation;
+    private Texture backgroundTexture;
+    private Texture weatherBackgroundTexture;
+    private Map<String, Texture> iconMap;
+
+    private java.util.List<MapObject> allObjects;
+    private java.util.List<MapObject> poiObjects;
+
+    private Table infoPanel;
+    private Label infoLabel;
+    private MapObject selectedPOI;
+
+    private Table weatherPanel;
+    private Image weatherIcon;
+    private Label weatherTemp;
+    private Texture weatherTexture;
+
+    private Texture buttonBin;
+    private Texture buttonEcoIsland;
+    private Texture buttonDisposalSite;
+    private Texture buttonHidden;
+    private ImageButton binButton;
+    private ImageButton ecoIslandButton;
+    private ImageButton disposalSiteButton;
+
+    private boolean binVisible = true;
+    private boolean ecoIslandVisible = true;
+    private boolean disposalSiteVisible = true;
+
+    private float markerBaseSize = 84f;
+    private float markerSizeCurrent = markerBaseSize;
+    private float markerSizeTarget = markerBaseSize;
+    private final float markerSizeMin = 36f;
+    private final float markerSizeMax = 200f;
+    private final float markerSmoothingSpeed = 12f;
+
+    private float targetZoom;
+    private final float minZoom = 0.3f;
+    private final float maxZoom = 2f;
+    private final float zoomStep = 0.34f;
+    private final float pinchStep = 0.05f;
+    private final float scrollZoomMultiplier = 0.15f;
+    private final float zoomSmoothingSpeed = 6f;
 
 
 
-    // center geolocation
+
     private final Geolocation CENTER_GEOLOCATION = new Geolocation(46.557314, 15.637771);
 
-    // test marker
     private final Geolocation MARKER_GEOLOCATION = new Geolocation(46.559070, 15.638100);
 
     @Override
@@ -78,10 +135,27 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         camera.zoom = 2f;
         camera.update();
 
+        targetZoom = camera.zoom;
+
         touchPosition = new Vector3();
 
         stage = new Stage(new ScreenViewport());
-        skin = new Skin(Gdx.files.internal("uiskin.json"));
+        skin = new Skin();
+        BitmapFont font = new BitmapFont();
+        skin.add("default-font", font);
+        Label.LabelStyle labelStyle = new Label.LabelStyle();
+        labelStyle.font = font;
+        skin.add("default", labelStyle);
+
+        Label.LabelStyle weatherLabelStyle = new Label.LabelStyle(labelStyle);
+        skin.add("weather", weatherLabelStyle);
+
+        Pixmap pixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        pixmap.setColor(new Color(0, 0, 0, 0.7f));
+        pixmap.fill();
+        backgroundTexture = new Texture(pixmap);
+        pixmap.dispose();
+        TextureRegionDrawable backgroundDrawable = new TextureRegionDrawable(new TextureRegion(backgroundTexture));
 
         Texture plusTexture = new Texture("plus.png");
         Texture minusTexture = new Texture("minus.png");
@@ -92,8 +166,8 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         zoomInButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                camera.zoom -= 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom -= zoomStep;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
             }
         });
 
@@ -103,21 +177,109 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         zoomOutButton.addListener(new ChangeListener() {
             @Override
             public void changed(ChangeEvent event, Actor actor) {
-                camera.zoom += 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom += zoomStep;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
             }
         });
 
         stage.addActor(zoomInButton);
         stage.addActor(zoomOutButton);
 
+        buttonBin = new Texture("button-bin.png");
+        buttonEcoIsland = new Texture("button-ecoisland.png");
+        buttonDisposalSite = new Texture("button-disposalsite.png");
+        buttonHidden = new Texture("button-hidden.png");
+
+        binButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonBin)));
+        binButton.setSize(50, 50);
+        binButton.setPosition(Gdx.graphics.getWidth() - 60, 10);
+        binButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                binVisible = !binVisible;
+                TextureRegionDrawable current = (TextureRegionDrawable) binButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonBin) {
+                    binButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    binButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonBin));
+                }
+            }
+        });
+        stage.addActor(binButton);
+
+        ecoIslandButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonEcoIsland)));
+        ecoIslandButton.setSize(50, 50);
+        ecoIslandButton.setPosition(Gdx.graphics.getWidth() - 120, 10);
+        ecoIslandButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                ecoIslandVisible = !ecoIslandVisible;
+                TextureRegionDrawable current = (TextureRegionDrawable) ecoIslandButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonEcoIsland) {
+                    ecoIslandButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    ecoIslandButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonEcoIsland));
+                }
+            }
+        });
+        stage.addActor(ecoIslandButton);
+
+        disposalSiteButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(buttonDisposalSite)));
+        disposalSiteButton.setSize(50, 50);
+        disposalSiteButton.setPosition(Gdx.graphics.getWidth() - 180, 10);
+        disposalSiteButton.addListener(new ClickListener() {
+            @Override
+            public void clicked(InputEvent event, float x, float y) {
+                disposalSiteVisible = !disposalSiteVisible;
+                TextureRegionDrawable current = (TextureRegionDrawable) disposalSiteButton.getStyle().imageUp;
+                if (current.getRegion().getTexture() == buttonDisposalSite) {
+                    disposalSiteButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonHidden));
+                } else {
+                    disposalSiteButton.getStyle().imageUp = new TextureRegionDrawable(new TextureRegion(buttonDisposalSite));
+                }
+            }
+        });
+        stage.addActor(disposalSiteButton);
+
+        infoPanel = new Table();
+        infoPanel.setSize(200, 80);
+        infoPanel.setPosition(10, 10);
+        infoPanel.setBackground(backgroundDrawable);
+
+        infoLabel = new Label("Kliknite na marker", skin);
+        infoLabel.setWrap(true);
+        infoPanel.add(infoLabel).pad(5).width(190);
+        infoPanel.row();
+
+        stage.addActor(infoPanel);
+
+        weatherTexture = new Texture("day_partial_cloud.png");
+        weatherIcon = new Image(weatherTexture);
+        weatherTemp = new Label("23 C", skin, "weather");
+        weatherPanel = new Table();
+
+        Pixmap weatherPixmap = new Pixmap(1, 1, Pixmap.Format.RGBA8888);
+        weatherPixmap.setColor(new Color(0, 0, 0, 0.7f));
+        weatherPixmap.fill();
+        weatherBackgroundTexture = new Texture(weatherPixmap);
+        weatherPixmap.dispose();
+        TextureRegionDrawable weatherBackground = new TextureRegionDrawable(new TextureRegion(weatherBackgroundTexture));
+        weatherPanel.setBackground(weatherBackground);
+
+        weatherPanel.setSize(100, 80);
+        weatherPanel.setPosition(10, Gdx.graphics.getHeight() - 90);
+        weatherPanel.add(weatherIcon).size(50, 50).row();
+        weatherPanel.add(weatherTemp).padTop(5);
+
+        stage.addActor(weatherPanel);
+
         GestureDetector gd = new GestureDetector(this);
 
         InputAdapter scrollProcessor = new InputAdapter() {
             @Override
             public boolean scrolled(float amountX, float amountY) {
-                camera.zoom += amountY * 0.1f;
-                camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 5f);
+                targetZoom += amountY * scrollZoomMultiplier;
+                targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
                 return true;
             }
         };
@@ -131,19 +293,19 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
 
         MapDataService service = new MapDataService();
-        List<MapObject> objects = service.fetchObjects();
+        allObjects = service.fetchObjects();
 
-        System.out.println("Loaded objects: " + objects.size());
+        System.out.println("Loaded objects: " + (allObjects == null ? 0 : allObjects.size()));
 
-        for (MapObject o : objects) {
-            System.out.println(o);
+        if (allObjects != null) {
+            for (MapObject o : allObjects) {
+                System.out.println(o);
+            }
         }
 
         try {
-            //in most cases, geolocation won't be in the center of the tile because tile borders are predetermined (geolocation can be at the corner of a tile)
             ZoomXY centerTile = MapRasterTiles.getTileNumber(CENTER_GEOLOCATION.lat, CENTER_GEOLOCATION.lng, Constants.ZOOM);
             mapTiles = MapRasterTiles.getRasterTileZone(centerTile, Constants.NUM_TILES);
-            //you need the beginning tile (tile on the top left corner) to convert geolocation to a location in pixels.
             beginTile = new ZoomXY(Constants.ZOOM, centerTile.x - ((Constants.NUM_TILES - 1) / 2), centerTile.y - ((Constants.NUM_TILES - 1) / 2));
         } catch (IOException e) {
             e.printStackTrace();
@@ -165,6 +327,20 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         layers.add(layer);
 
         tiledMapRenderer = new OrthogonalTiledMapRenderer(tiledMap);
+
+        batch = new SpriteBatch();
+        pinBin = new Texture("pin-bin.png");
+        pinDisposal = new Texture("pin-disposal.png");
+        pinRecycle = new Texture("pin-recycle.png");
+        myLocation = new Texture("my-location.png");
+        iconMap = new HashMap<>();
+        iconMap.put("bin", pinBin);
+        iconMap.put("disposal-site", pinDisposal);
+        iconMap.put("disposal", pinDisposal);
+        iconMap.put("eco-island", pinRecycle);
+        iconMap.put("eco", pinRecycle);
+
+        filterPOIsToMapBounds(allObjects);
     }
 
     @Override
@@ -172,6 +348,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         ScreenUtils.clear(0, 0, 0, 1);
 
         handleInput();
+
+        float tz = MathUtils.clamp(Gdx.graphics.getDeltaTime() * zoomSmoothingSpeed, 0f, 1f);
+        camera.zoom = MathUtils.lerp(camera.zoom, targetZoom, tz);
+        camera.zoom = MathUtils.clamp(camera.zoom, minZoom, maxZoom);
 
         camera.update();
 
@@ -186,13 +366,55 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     }
 
     private void drawMarkers() {
-        Vector2 marker = MapRasterTiles.getPixelPosition(MARKER_GEOLOCATION.lat, MARKER_GEOLOCATION.lng, beginTile.x, beginTile.y);
+        if (beginTile == null || poiObjects == null || poiObjects.isEmpty()) {
+            return;
+        }
 
-        shapeRenderer.setProjectionMatrix(camera.combined);
-        shapeRenderer.setColor(Color.RED);
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled);
-        shapeRenderer.circle(marker.x, marker.y, 10);
-        shapeRenderer.end();
+        markerSizeTarget = MathUtils.clamp(markerBaseSize * camera.zoom, markerSizeMin, markerSizeMax);
+        float t = MathUtils.clamp(Gdx.graphics.getDeltaTime() * markerSmoothingSpeed, 0f, 1f);
+        markerSizeCurrent = MathUtils.lerp(markerSizeCurrent, markerSizeTarget, t);
+
+        batch.setProjectionMatrix(camera.combined);
+        batch.begin();
+        for (MapObject o : poiObjects) {
+            if ((o.type.equals("bin") && binVisible) ||
+                (o.type.equals("eco-island") && ecoIslandVisible) ||
+                (o.type.equals("disposal-site") && disposalSiteVisible)) {
+                Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
+                Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
+                float size = markerSizeCurrent;
+                batch.draw(tex, pos.x - size / 2f, pos.y - size / 2f, size, size);
+            }
+        }
+        batch.end();
+    }
+
+    private void filterPOIsToMapBounds(java.util.List<MapObject> all) {
+        poiObjects = new ArrayList<>();
+        if (all == null || beginTile == null) return;
+
+        int z = Constants.ZOOM;
+        double leftLon = MapRasterTiles.tile2long(beginTile.x, z);
+        double rightLon = MapRasterTiles.tile2long(beginTile.x + Constants.NUM_TILES, z);
+        double topLat = MapRasterTiles.tile2lat(beginTile.y, z);
+        double bottomLat = MapRasterTiles.tile2lat(beginTile.y + Constants.NUM_TILES, z);
+
+        for (MapObject o : all) {
+            if (o.lon >= leftLon && o.lon <= rightLon && o.lat <= topLat && o.lat >= bottomLat) {
+                poiObjects.add(o);
+            }
+        }
+
+        System.out.println("POIs in current map bounds: " + poiObjects.size());
+    }
+
+    private void updateInfoPanel() {
+        if (selectedPOI != null) {
+            String typeDisplay = selectedPOI.type;
+            infoLabel.setText("Tip: " + typeDisplay + "\nKoordinate: " + String.format("%.6f", selectedPOI.lat) + ", " + String.format("%.6f", selectedPOI.lon));
+        } else {
+            infoLabel.setText("POI podatki");
+        }
     }
 
     @Override
@@ -200,6 +422,19 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         shapeRenderer.dispose();
         stage.dispose();
         skin.dispose();
+
+        if (batch != null) batch.dispose();
+        if (pinBin != null) pinBin.dispose();
+        if (pinDisposal != null) pinDisposal.dispose();
+        if (pinRecycle != null) pinRecycle.dispose();
+        if (myLocation != null) myLocation.dispose();
+        if (backgroundTexture != null) backgroundTexture.dispose();
+        if (weatherTexture != null) weatherTexture.dispose();
+        if (weatherBackgroundTexture != null) weatherBackgroundTexture.dispose();
+        if (buttonBin != null) buttonBin.dispose();
+        if (buttonEcoIsland != null) buttonEcoIsland.dispose();
+        if (buttonDisposalSite != null) buttonDisposalSite.dispose();
+        if (buttonHidden != null) buttonHidden.dispose();
 
     }
 
@@ -212,6 +447,28 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
     @Override
     public boolean tap(float x, float y, int count, int button) {
+        Vector3 worldPos = new Vector3(x, y, 0);
+        camera.unproject(worldPos);
+
+        if (poiObjects != null) {
+            for (MapObject poi : poiObjects) {
+                if ((poi.type.equals("bin") && binVisible) ||
+                    (poi.type.equals("eco-island") && ecoIslandVisible) ||
+                    (poi.type.equals("disposal-site") && disposalSiteVisible)) {
+                    Vector2 pos = MapRasterTiles.getPixelPosition(poi.lat, poi.lon, beginTile.x, beginTile.y);
+                    float size = markerSizeCurrent;
+                    if (worldPos.x >= pos.x - size / 2 && worldPos.x <= pos.x + size / 2 &&
+                        worldPos.y >= pos.y - size / 2 && worldPos.y <= pos.y + size / 2) {
+                        selectedPOI = poi;
+                        updateInfoPanel();
+                        return true;
+                    }
+                }
+            }
+        }
+
+        selectedPOI = null;
+        updateInfoPanel();
         return false;
     }
 
@@ -240,10 +497,11 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     @Override
     public boolean zoom(float initialDistance, float distance) {
         if (initialDistance >= distance)
-            camera.zoom += 0.02;
+            targetZoom += pinchStep;
         else
-            camera.zoom -= 0.02;
-        return false;
+            targetZoom -= pinchStep;
+        targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
+        return true;
     }
 
     @Override
@@ -258,10 +516,10 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
     private void handleInput() {
         if (Gdx.input.isKeyPressed(Input.Keys.A)) {
-            camera.zoom += 0.02;
+            targetZoom += zoomStep * 0.25f;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.Q)) {
-            camera.zoom -= 0.02;
+            targetZoom -= zoomStep * 0.25f;
         }
         if (Gdx.input.isKeyPressed(Input.Keys.LEFT)) {
             camera.translate(-3, 0, 0);
@@ -276,8 +534,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             camera.translate(0, 3, 0);
         }
 
-        camera.zoom = MathUtils.clamp(camera.zoom, 0.5f, 2f);
-
+        targetZoom = MathUtils.clamp(targetZoom, minZoom, maxZoom);
         float effectiveViewportWidth = camera.viewportWidth * camera.zoom;
         float effectiveViewportHeight = camera.viewportHeight * camera.zoom;
 

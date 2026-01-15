@@ -16,7 +16,7 @@ import si.um.feri.maprri.raster.utils.MapObject;
 
 public class MapDataService {
 
-    private static final String API_URL = "http://localhost:3000/api/poi";
+    private static final String API_URL = "http://localhost:5000/api/poi";
 
     public List<MapObject> fetchObjects() {
         List<MapObject> objects = new ArrayList<>();
@@ -38,14 +38,34 @@ public class MapDataService {
             JSONArray array = new JSONArray(sb.toString());
 
             for (int i = 0; i < array.length(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                JSONObject location = obj.getJSONObject("location");
-                JSONArray coords = location.getJSONArray("coordinates");
-                double lon = coords.getDouble(0);
-                double lat = coords.getDouble(1);
-                String type = obj.getString("type");
+                try {
+                    JSONObject obj = array.getJSONObject(i);
 
-                objects.add(new MapObject(lat, lon, type));
+                    JSONArray coords = null;
+                    if (obj.has("location") && obj.getJSONObject("location").has("coordinates")) {
+                        coords = obj.getJSONObject("location").getJSONArray("coordinates");
+                    } else if (obj.has("geometry") && obj.getJSONObject("geometry").has("coordinates")) {
+                        coords = obj.getJSONObject("geometry").getJSONArray("coordinates");
+                    } else if (obj.has("coordinates")) {
+                        coords = obj.getJSONArray("coordinates");
+                    }
+
+                    if (coords == null || coords.length() < 2) {
+                        continue;
+                    }
+
+                    double lon = coords.getDouble(0);
+                    double lat = coords.getDouble(1);
+
+                    String poiType = obj.optString("type", "");
+                    if ("Point".equalsIgnoreCase(poiType) || poiType.isEmpty()) {
+                        poiType = obj.optString("poiType", obj.optString("category", "unknown"));
+                    }
+
+                    objects.add(new MapObject(lat, lon, poiType));
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
             }
 
         } catch (Exception e) {
