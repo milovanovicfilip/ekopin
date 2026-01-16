@@ -1,7 +1,7 @@
 
 # Rezultati
 
-## Loss po epohah
+## Loss po epohah pri učenju modela:
 - **Epoch 1**: 14.9098
 - **Epoch 2**: 2.1432
 - **Epoch 3**: 0.7775
@@ -22,4 +22,17 @@
 - **Epoch 18**: 0.1482
 - **Epoch 19**: 0.1307
 - **Epoch 20**: 0.1742
+
+## Rezultati evalvacije:
+- **Accuracy**: 0.9852 (98.52%)
+- **Precision**: 0.9877 (98.77%)
+- **Recall**: 0.9877 (98.77%)
+- **F1-score**: 0.9877 (98.77%)
+
+## Confusion Matrix:
+
+|                 | Predicted Positive | Predicted Negative |
+|-----------------|--------------------|--------------------|
+| **Actual Positive** | **80 (TP)**        | **1 (FN)**     |
+| **Actual Negative** | **1 (FP)**         | **53 (TN)**    |
 
