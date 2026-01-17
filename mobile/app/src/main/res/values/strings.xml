@@ -69,6 +69,6 @@
     <string name="image_simulation">Zajeta (simulacija obdelave)</string>
     <string name="message_log_format">========================================\nSPOROČILO: %1$s\nČAS: %2$s\nLOKACIJA: %3$s\n========================================</string>
     <string name="location_na">N/A</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <string name="simulation_toggle">Simulacija</string>
 </resources>

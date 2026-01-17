@@ -10,6 +10,8 @@ val localProperties = Properties().apply {
     if (file.exists()) file.inputStream().use { load(it) }
 }
 val geoapifyKey: String = localProperties.getProperty("GEOAPIFY_KEY") ?: ""
+val mqttHost: String = localProperties.getProperty("MQTT_HOST") ?: ""
+val mqttPort: String = localProperties.getProperty("MQTT_PORT") ?: ""
 
 android {
     namespace = "com.example.mobile"
@@ -28,6 +30,11 @@ android {
         versionName = "1.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GEOAPIFY_KEY", "\"$geoapifyKey\"")
+        buildConfigField("String", "MQTT_HOST", "\"$mqttHost\"")
+        buildConfigField("String", "MQTT_PORT", "\"$mqttPort\"")
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     buildTypes {
@@ -67,14 +74,11 @@ dependencies {
     implementation(libs.material)
     implementation(libs.androidx.activity)
     implementation(libs.androidx.constraintlayout)
-    
-    // Location services
+
     implementation("com.google.android.gms:play-services-location:21.0.1")
-    
-    // Coroutines for Play Services
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.7.3")
-    
-    // CameraX
+
     val cameraxVersion = "1.3.1"
     implementation("androidx.camera:camera-core:${cameraxVersion}")
     implementation("androidx.camera:camera-camera2:${cameraxVersion}")
@@ -88,8 +92,11 @@ dependencies {
     val gdxVersion = "1.12.1"
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
-    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
+    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+
+    implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
+    implementation("com.github.hannesa2:paho.mqtt.android:4.2.3")
 }

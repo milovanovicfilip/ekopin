@@ -13,7 +13,12 @@ import com.example.mobile.BuildConfig
 import java.util.PriorityQueue
 import kotlin.math.*
 
-class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
+class MapGdxApp(
+    private val onPickLocation: ((lat: Float, lon: Float) -> Unit)? = null,
+    private val onDotClick: ((id: String) -> Unit)? = null,
+    private val greenMarkerPng: ByteArray? = null,
+    private val redMoveableMarkerPng: ByteArray? = null,
+) : ApplicationAdapter(), GestureDetector.GestureListener {
 
     private lateinit var batch: SpriteBatch
     private lateinit var gestures: GestureDetector
@@ -34,6 +39,15 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
     private val maxConcurrent = 12
     private val maxCachedTiles = 1400
     private val keepZoomLevelsForFallback = 2
+
+    private data class Dot(val id: String, val lat: Float, val lon: Float)
+    private val dots = LinkedHashMap<String, Dot>()
+
+    private lateinit var greenTex: Texture
+    private lateinit var redPickTex: Texture
+
+    private val dotDrawSize = 44f
+    private val dotHitRadius = 120f
 
     private data class TileKey(val z: Int, val x: Int, val y: Int)
     private data class TileRequest(val key: TileKey, val priority: Float)
@@ -69,13 +83,20 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
 
     private var pinchAccum = 1f
     private var lastPinchDistance = -1f
-
     private var zoomBurstFrames = 0
+
+    private var hasPickMarker = false
+    private var pickLat = 0f
+    private var pickLon = 0f
+    private var draggingPickMarker = false
 
     override fun create() {
         batch = SpriteBatch()
         gestures = GestureDetector(this)
         Gdx.input.inputProcessor = gestures
+
+        greenTex = loadTextureFromPngBytesOrFallback(greenMarkerPng) { fallbackGreenDotTexture() }
+        redPickTex = loadTextureFromPngBytesOrFallback(redMoveableMarkerPng) { fallbackRedDotTexture() }
     }
 
     override fun render() {
@@ -84,9 +105,75 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
 
         batch.begin()
         drawVisibleTiles()
+        drawDots()
+        drawPickMarker()
         batch.end()
 
         pumpRequests()
+    }
+
+    fun clearPickDot() {
+        hasPickMarker = false
+        draggingPickMarker = false
+    }
+
+    fun setDots(newDots: List<Triple<String, Float, Float>>) {
+        dots.clear()
+        for ((id, lat, lon) in newDots) {
+            dots[id] = Dot(id, lat, lon)
+        }
+    }
+
+    fun addDot(id: String, lat: Float, lon: Float) {
+        dots[id] = Dot(id, lat, lon)
+    }
+
+    fun removeDot(id: String) {
+        dots.remove(id)
+    }
+
+    private fun drawDots() {
+        if (dots.isEmpty()) return
+
+        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
+        val halfW = Gdx.graphics.width / 2f
+        val halfH = Gdx.graphics.height / 2f
+
+        for (d in dots.values) {
+            val (pX, pY) = latLonToPixel(d.lat.toDouble(), d.lon.toDouble(), zoom)
+            val screenX = (pX - centerPx) + halfW
+            val screenY = halfH - (pY - centerPy)
+
+            batch.draw(
+                greenTex,
+                screenX - dotDrawSize / 2f,
+                screenY - dotDrawSize / 2f,
+                dotDrawSize,
+                dotDrawSize
+            )
+        }
+    }
+
+    private fun drawPickMarker() {
+        if (!hasPickMarker) return
+
+        val (mx, my) = pickMarkerScreenXY()
+        val yFlipped = (Gdx.graphics.height - my)
+
+        val size = 56f
+        batch.draw(redPickTex, mx - size / 2f, yFlipped - size / 2f, size, size)
+    }
+
+    private fun pickMarkerScreenXY(): Pair<Float, Float> {
+        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
+        val (mPx, mPy) = latLonToPixel(pickLat.toDouble(), pickLon.toDouble(), zoom)
+
+        val halfW = Gdx.graphics.width / 2f
+        val halfH = Gdx.graphics.height / 2f
+
+        val screenX = (mPx - centerPx) + halfW
+        val screenY = (mPy - centerPy) + halfH
+        return screenX to screenY
     }
 
     private fun drawVisibleTiles() {
@@ -103,8 +190,7 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
         val topPy = centerPy - halfH
         val bottomPy = centerPy + halfH
 
-        val effectivePrefetch =
-            if (preloadBoostFrames > 0) prefetchZooming else prefetchBase
+        val effectivePrefetch = if (preloadBoostFrames > 0) prefetchZooming else prefetchBase
         if (preloadBoostFrames > 0) preloadBoostFrames--
 
         val minTileX = floor(leftPx / tileSize).toInt() - effectivePrefetch
@@ -146,7 +232,6 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
                 }
 
                 var drewSomething = false
-
                 if (!drewSomething && z >= 1) {
                     val pZ = z - 1
                     val pN = 1 shl pZ
@@ -219,10 +304,10 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
 
                         if (t00 != null || t10 != null || t01 != null || t11 != null) {
                             val half = tileSize / 2f
-                            if (t00 != null) batch.draw(t00, screenX,        screenY + half, half, half)
+                            if (t00 != null) batch.draw(t00, screenX, screenY + half, half, half)
                             if (t10 != null) batch.draw(t10, screenX + half, screenY + half, half, half)
-                            if (t01 != null) batch.draw(t01, screenX,        screenY,        half, half)
-                            if (t11 != null) batch.draw(t11, screenX + half, screenY,        half, half)
+                            if (t01 != null) batch.draw(t01, screenX, screenY, half, half)
+                            if (t11 != null) batch.draw(t11, screenX + half, screenY, half, half)
                         }
                     }
                 }
@@ -303,15 +388,61 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
         return lat.toFloat() to lon.toFloat()
     }
 
-    override fun pan(x: Float, y: Float, deltaX: Float, deltaY: Float): Boolean {
-        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
+    override fun touchDown(x: Float, y: Float, pointer: Int, button: Int): Boolean {
+        if (hasPickMarker) {
+            val (mx, my) = pickMarkerScreenXY()
+            val dx = x - mx
+            val dy = y - my
+            if (dx * dx + dy * dy <= 60f * 60f) {
+                draggingPickMarker = true
+                return true
+            }
+        }
+        draggingPickMarker = false
+        return false
+    }
 
+    override fun pan(x: Float, y: Float, deltaX: Float, deltaY: Float): Boolean {
+        if (hasPickMarker && draggingPickMarker) {
+            val (mPx, mPy) = latLonToPixel(pickLat.toDouble(), pickLon.toDouble(), zoom)
+            val newPx = mPx + deltaX
+            val newPy = mPy + deltaY
+            val (newLat, newLon) = pixelToLatLon(newPx, newPy, zoom)
+            pickLat = newLat
+            pickLon = newLon
+            onPickLocation?.invoke(pickLat, pickLon)
+            return true
+        }
+
+        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
         val newPx = centerPx - deltaX
         val newPy = centerPy - deltaY
-
         val (newLat, newLon) = pixelToLatLon(newPx, newPy, zoom)
         centerLat = newLat
         centerLon = newLon
+        return true
+    }
+
+    override fun panStop(x: Float, y: Float, pointer: Int, button: Int): Boolean {
+        draggingPickMarker = false
+        return false
+    }
+
+    override fun longPress(x: Float, y: Float): Boolean {
+        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
+        val halfW = Gdx.graphics.width / 2f
+        val halfH = Gdx.graphics.height / 2f
+
+        val worldPx = centerPx + (x - halfW)
+        val worldPy = centerPy + (y - halfH)
+
+        val (lat, lon) = pixelToLatLon(worldPx, worldPy, zoom)
+
+        hasPickMarker = true
+        pickLat = lat
+        pickLon = lon
+
+        onPickLocation?.invoke(pickLat, pickLon)
         return true
     }
 
@@ -360,23 +491,79 @@ class MapGdxApp : ApplicationAdapter(), GestureDetector.GestureListener {
         lastPinchDistance = -1f
     }
 
+    override fun tap(x: Float, y: Float, count: Int, button: Int): Boolean {
+        val yFixed = Gdx.graphics.height - y
+        if (dots.isEmpty()) return false
+
+        val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
+        val halfW = Gdx.graphics.width / 2f
+        val halfH = Gdx.graphics.height / 2f
+
+        var bestId: String? = null
+        var bestDist2 = Float.MAX_VALUE
+
+        for (d in dots.values) {
+            val (pX, pY) = latLonToPixel(d.lat.toDouble(), d.lon.toDouble(), zoom)
+            val screenX = (pX - centerPx) + halfW
+            val screenY = halfH - (pY - centerPy)
+
+            val dx = x - screenX
+            val dy = yFixed - screenY
+            val dist2 = dx * dx + dy * dy
+
+            if (dist2 <= dotHitRadius * dotHitRadius && dist2 < bestDist2) {
+                bestDist2 = dist2
+                bestId = d.id
+            }
+        }
+
+        if (bestId != null) {
+            onDotClick?.invoke(bestId!!)
+            return true
+        }
+        return false
+    }
+
+    override fun fling(velocityX: Float, velocityY: Float, button: Int) = false
+    override fun pinch(initialPointer1: Vector2?, initialPointer2: Vector2?, pointer1: Vector2?, pointer2: Vector2?) = false
+
+    private fun loadTextureFromPngBytesOrFallback(bytes: ByteArray?, fallback: () -> Texture): Texture {
+        if (bytes == null || bytes.isEmpty()) return fallback()
+        return try {
+            val pm = Pixmap(bytes, 0, bytes.size)
+            val tex = Texture(pm)
+            pm.dispose()
+            tex
+        } catch (_: Exception) {
+            fallback()
+        }
+    }
+
+    private fun fallbackRedDotTexture(): Texture {
+        val pm = Pixmap(64, 64, Pixmap.Format.RGBA8888)
+        pm.setColor(1f, 0f, 0f, 1f)
+        pm.fillCircle(32, 32, 18)
+        val t = Texture(pm)
+        pm.dispose()
+        return t
+    }
+
+    private fun fallbackGreenDotTexture(): Texture {
+        val pm = Pixmap(64, 64, Pixmap.Format.RGBA8888)
+        pm.setColor(0f, 1f, 0f, 1f)
+        pm.fillCircle(32, 32, 18)
+        val t = Texture(pm)
+        pm.dispose()
+        return t
+    }
+
     override fun dispose() {
         requestPQ.clear()
         queuedSet.clear()
         active.clear()
         cache.clear()
         batch.dispose()
+        greenTex.dispose()
+        redPickTex.dispose()
     }
-
-    override fun touchDown(x: Float, y: Float, pointer: Int, button: Int) = false
-    override fun tap(x: Float, y: Float, count: Int, button: Int) = false
-    override fun longPress(x: Float, y: Float) = false
-    override fun fling(velocityX: Float, velocityY: Float, button: Int) = false
-    override fun panStop(x: Float, y: Float, pointer: Int, button: Int) = false
-    override fun pinch(
-        initialPointer1: Vector2?,
-        initialPointer2: Vector2?,
-        pointer1: Vector2?,
-        pointer2: Vector2?
-    ) = false
 }
