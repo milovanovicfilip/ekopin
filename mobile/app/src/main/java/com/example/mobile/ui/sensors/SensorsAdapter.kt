@@ -11,7 +11,8 @@ import com.example.mobile.data.model.Sensor
 
 class SensorsAdapter(
     private val sensors: List<Sensor>,
-    private val onClick: (Sensor) -> Unit
+    private val onClick: (Sensor) -> Unit,
+    private val onToggle: (Sensor, Boolean) -> Unit
 ) : RecyclerView.Adapter<SensorsAdapter.SensorViewHolder>() {
 
     inner class SensorViewHolder(view: View) : RecyclerView.ViewHolder(view) {
@@ -34,7 +35,12 @@ class SensorsAdapter(
         holder.range.text = sensor.range
         holder.frequency.text = sensor.frequency
         holder.location.text = sensor.location
+
+        holder.enabled.setOnCheckedChangeListener(null)
         holder.enabled.isChecked = sensor.enabled
+        holder.enabled.setOnCheckedChangeListener { _, isChecked ->
+            onToggle(sensor, isChecked)
+        }
 
         holder.itemView.setOnClickListener {
             onClick(sensor)
