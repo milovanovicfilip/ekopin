@@ -16,7 +16,42 @@ import si.um.feri.maprri.raster.utils.MapObject;
 
 public class MapDataService {
 
-    private static final String API_URL = "http://localhost:5000/api/poi";
+    private static final String API_URL = "http://localhost:3000/api/poi";
+
+    public void updatePoiLocation(String poiId, double lat, double lon) {
+        if (poiId == null || poiId.isEmpty()) return;
+
+        new Thread(() -> {
+            try {
+                URL url = new URL(API_URL + "/" + poiId + "/location");
+                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+                conn.setRequestMethod("PUT");
+                conn.setRequestProperty("Content-Type", "application/json");
+                conn.setDoOutput(true);
+
+                JSONObject body = new JSONObject();
+                JSONObject location = new JSONObject();
+                location.put("type", "Point");
+                location.put("coordinates", new JSONArray().put(lon).put(lat));
+                body.put("location", location);
+
+                byte[] outputBytes = body.toString().getBytes("UTF-8");
+                conn.getOutputStream().write(outputBytes);
+
+                int responseCode = conn.getResponseCode();
+                if (responseCode != HttpURLConnection.HTTP_OK && responseCode != HttpURLConnection.HTTP_NO_CONTENT) {
+                    System.err.println("Failed to update POI location: " + responseCode);
+                } else {
+                    System.out.println("POI updated successfully: " + poiId);
+                }
+
+                conn.disconnect();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
+    }
+
 
     public List<MapObject> fetchObjects() {
         List<MapObject> objects = new ArrayList<>();
@@ -54,6 +89,7 @@ public class MapDataService {
                         continue;
                     }
 
+                    String id = obj.optString("_id", null);
                     double lon = coords.getDouble(0);
                     double lat = coords.getDouble(1);
 
@@ -62,7 +98,7 @@ public class MapDataService {
                         poiType = obj.optString("poiType", obj.optString("category", "unknown"));
                     }
 
-                    objects.add(new MapObject(lat, lon, poiType));
+                    objects.add(new MapObject(id, lat, lon, poiType));
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
