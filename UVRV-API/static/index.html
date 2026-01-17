@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+<meta charset="UTF-8">
+<title>Analiza Smetnjakov</title>
+<style>
+  body { font-family: sans-serif; padding: 20px; }
+  #video { border: 1px solid #333; width: 320px; height: 240px; }
+  #canvas { display:none; }
+  .rezultat { margin-top:10px; font-weight:bold; }
+</style>
+</head>
+<body>
+<h1>Analiza Polnosti Smetnjakov</h1>
+
+<h2>Kamera</h2>
+<video id="video" autoplay playsinline></video>
+<button onclick="zacniKamero()">Zaženi kamero</button>
+<button id="analizirajBtn" onclick="zajemiInPoslji()" disabled>Zajemi in analiziraj</button>
+<canvas id="canvas"></canvas>
+<div id="rezultat" class="rezultat"></div>
+
+<h2>Upload slike</h2>
+<input type="file" id="fileInput">
+<button onclick="analizirajUpload()">Analiziraj</button>
+
+<h2>Zgodovina</h2>
+<button onclick="naloziZgodovino()">Osveži zgodovino</button>
+<table border="1">
+<thead><tr><th>Prob</th><th>Status</th><th>Datoteka</th></tr></thead>
+<tbody id="zgodovinaTelo"><tr><td colspan="4">Ni podatkov</td></tr></tbody>
+</table>
+
+<script>
+const video = document.getElementById('video');
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+const rezultatDiv = document.getElementById('rezultat');
+const analizirajBtn = document.getElementById('analizirajBtn');
+let stream = null;
+
+async function zacniKamero() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        video.srcObject = stream;
+        analizirajBtn.disabled = false;
+        rezultatDiv.innerHTML = 'Kamera aktivirana';
+    } catch(error) {
+        rezultatDiv.innerHTML = 'Napaka pri zagonu kamere: ' + error.message;
+        console.error('Napaka pri kameri:', error);
+    }
+}
+
+async function zajemiInPoslji() {
+    try {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video,0,0);
+        
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        if(!blob) {
+            rezultatDiv.innerHTML = 'Napaka pri zajemu slike';
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('slika', blob, 'kamera.png');
+        formData.append('cas', new Date().toISOString());
+        
+        rezultatDiv.innerHTML = 'Analiziram...';
+        const res = await fetch('/analiziraj', {method:'POST', body:formData});
+        const data = await res.json();
+        prikazi(data);
+        await naloziZgodovino();
+    } catch(error) {
+        rezultatDiv.innerHTML = 'Napaka: ' + error.message;
+        console.error('Napaka pri analizi:', error);
+    }
+}
+
+async function analizirajUpload() {
+    try {
+        const fileInput = document.getElementById('fileInput');
+        if(fileInput.files.length==0) {
+            rezultatDiv.innerHTML = 'Prosim izberite sliko';
+            return;
+        }
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('slika', file, file.name);
+        formData.append('cas', new Date().toISOString());
+        
+        rezultatDiv.innerHTML = 'Analiziram...';
+        const res = await fetch('/analiziraj', {method:'POST', body:formData});
+        const data = await res.json();
+        prikazi(data);
+        await naloziZgodovino();
+    } catch(error) {
+        rezultatDiv.innerHTML = 'Napaka: ' + error.message;
+        console.error('Napaka pri uploadu:', error);
+    }
+}
+
+function prikazi(data){
+    if(data.status_code=='uspeh'){
+        rezultatDiv.innerHTML=`Status: ${data.status}, Prob: ${data.probability}`;
+    } else {
+        rezultatDiv.innerHTML=`Napaka: ${data.napaka}`;
+    }
+}
+
+async function naloziZgodovino(){
+    try {
+        const res = await fetch('/zgodovina');
+        const data = await res.json();
+        const telo = document.getElementById('zgodovinaTelo');
+        if(data.rezultati && data.rezultati.length==0){ 
+            telo.innerHTML='<tr><td colspan="3">Ni podatkov</td></tr>'; 
+            return; 
+        }
+        if(data.rezultati) {
+            telo.innerHTML=data.rezultati.slice(-10).reverse().map(r=>{
+                const cas = r.cas ? new Date(r.cas).toLocaleString('sl-SI') : 'N/A';
+                const prob = r.probability !== undefined ? r.probability : 'N/A';
+                const status = r.status || 'N/A';
+                const ime = r.image_name || 'N/A';
+                return `<tr><td>${prob}</td><td>${status}</td><td>${ime}</td></tr>`;
+            }).join('');
+        }
+    } catch(error) {
+        console.error('Napaka pri nalaganju zgodovine:', error);
+        const telo = document.getElementById('zgodovinaTelo');
+        telo.innerHTML='<tr><td colspan="4">Napaka pri nalaganju</td></tr>';
+    }
+}
+
+window.onload=naloziZgodovino;
+</script>
+</body>
+</html>
