@@ -30,10 +30,8 @@ public class MapDataService {
                 conn.setDoOutput(true);
 
                 JSONObject body = new JSONObject();
-                JSONObject location = new JSONObject();
-                location.put("type", "Point");
-                location.put("coordinates", new JSONArray().put(lon).put(lat));
-                body.put("location", location);
+                body.put("lat", lat);
+                body.put("lon", lon);
 
                 byte[] outputBytes = body.toString().getBytes("UTF-8");
                 conn.getOutputStream().write(outputBytes);

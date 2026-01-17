@@ -878,10 +878,9 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         camera.unproject(worldPos);
 
         if (selectedPOI != null) {
-            // Konvertuj world poziciju u tile-relativne piksel koordinate
             float pixelX = worldPos.x;
-            float pixelY = worldPos.y;
-            
+            float pixelY = Constants.MAP_HEIGHT - worldPos.y;
+
             Geolocation geo = MapRasterTiles.pixelToGeo(pixelX, pixelY, beginTile.x, beginTile.y);
 
             for (Poi bin : simulatedBins) {
@@ -946,6 +945,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private void sendUpdateLocationRequest(Poi bin) {
         new Thread(() -> {
             try {
+                System.out.println("Updating POI: id=" + bin.poi.id + ", lat=" + bin.poi.lat + ", lon=" + bin.poi.lon);
                 MapDataService service = new MapDataService();
                 service.updatePoiLocation(bin.poi.id, bin.poi.lat, bin.poi.lon);
             } catch (Exception e) {
