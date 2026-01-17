@@ -7,6 +7,7 @@ public class MapObjectMapper {
 
     public static MapObject toModel(MapObjectDTO dto) {
         return new MapObject(
+            dto.id,
             dto.lat,
             dto.lon,
             dto.type

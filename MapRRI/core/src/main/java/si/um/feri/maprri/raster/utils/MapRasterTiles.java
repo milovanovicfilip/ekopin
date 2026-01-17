@@ -1,5 +1,8 @@
 package si.um.feri.maprri.raster.utils;
 
+import static si.um.feri.maprri.raster.utils.Constants.MAP_HEIGHT;
+import static si.um.feri.maprri.raster.utils.Constants.ZOOM;
+
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.math.Vector2;
@@ -48,6 +51,22 @@ public class MapRasterTiles {
         URL url = new URL(mapServiceUrl + tilesetId + "/" + zoom + "/" + x + "/" + y + format + token);
         ByteArrayOutputStream bis = fetchTile(url);
         return getTexture(bis.toByteArray());
+    }
+
+    public static double tileXToLong(double tileX, int zoom) {
+        return tileX / Math.pow(2.0, zoom) * 360.0 - 180.0;
+    }
+
+    public static double tileYToLat(double tileY, int zoom) {
+        double n = Math.PI - 2.0 * Math.PI * tileY / Math.pow(2.0, zoom);
+        return Math.toDegrees(Math.atan(Math.sinh(n)));
+    }
+
+
+    public static Geolocation pixelToGeo(float pixelX, float pixelY, int tileX, int tileY) {
+        double lon = tileXToLong(tileX + (double) pixelX / TILE_SIZE, ZOOM);
+        double lat = tileYToLat(tileY + (double) pixelY / TILE_SIZE, ZOOM);
+        return new Geolocation(lat, lon);
     }
 
     /**
@@ -207,6 +226,17 @@ public class MapRasterTiles {
         );
     }
 
+    public static Vector2 getPixelPositionPrecise(double lat, double lng, int beginTileX, int beginTileY) {
+        double[] worldCoordinate = project(lat, lng, TILE_SIZE);
+        double scale = Math.pow(2, ZOOM);
+
+        double x = worldCoordinate[0] * scale - (beginTileX * TILE_SIZE);
+        double y = MAP_HEIGHT - (worldCoordinate[1] * scale - (beginTileY * TILE_SIZE) - 1);
+
+        return new Vector2((float) x, (float) y);
+    }
+
+
     public static Vector2 getPixelPosition(double lat, double lng, int beginTileX, int beginTileY) {
         double[] worldCoordinate = project(lat, lng, MapRasterTiles.TILE_SIZE);
         // Scale to fit our image
@@ -215,7 +245,7 @@ public class MapRasterTiles {
         // Apply scale to world coordinates to get image coordinates
         return new Vector2(
                 (int) (Math.floor(worldCoordinate[0] * scale) - (beginTileX * MapRasterTiles.TILE_SIZE)),
-                si.um.feri.maprri.raster.utils.Constants.MAP_HEIGHT - (int) (Math.floor(worldCoordinate[1] * scale) - (beginTileY * MapRasterTiles.TILE_SIZE) - 1)
+                MAP_HEIGHT - (int) (Math.floor(worldCoordinate[1] * scale) - (beginTileY * MapRasterTiles.TILE_SIZE) - 1)
         );
     }
 
