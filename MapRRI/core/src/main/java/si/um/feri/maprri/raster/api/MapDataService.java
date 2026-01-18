@@ -107,4 +107,59 @@ public class MapDataService {
         }
         return objects;
     }
+
+    public List<BinStatus> fetchBinStatuses() {
+        List<BinStatus> out = new ArrayList<>();
+        try {
+            URL url = new URL("http://localhost:3000/api/binstatus/");
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+
+            if (conn.getResponseCode() != 200) {
+                throw new RuntimeException("HTTP error: " + conn.getResponseCode());
+            }
+
+            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) sb.append(line);
+            br.close();
+
+            JSONArray array = new JSONArray(sb.toString());
+            for (int i = 0; i < array.length(); i++) {
+                JSONObject obj = array.getJSONObject(i);
+
+                String poiId = null;
+                Object poiField = obj.opt("poiId");
+                if (poiField instanceof JSONObject) {
+                    poiId = ((JSONObject) poiField).optString("_id", null);
+                } else if (poiField instanceof String) {
+                    poiId = (String) poiField;
+                }
+
+                String status = obj.optString("status", null);
+
+                if (poiId == null) continue;
+                if (!"full".equals(status) && !"empty".equals(status)) continue;
+
+                out.add(new BinStatus(poiId, status));
+            }
+
+            conn.disconnect();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return out;
+    }
+
+
+    public static class BinStatus {
+        public final String poiId;
+        public final String status;
+
+        public BinStatus(String poiId, String status) {
+            this.poiId = poiId;
+            this.status = status;
+        }
+    }
 }

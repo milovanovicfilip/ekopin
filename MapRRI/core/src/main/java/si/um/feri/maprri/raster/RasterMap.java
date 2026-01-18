@@ -58,6 +58,7 @@ import java.util.List;
 
 import si.um.feri.maprri.raster.api.MapDataService;
 import si.um.feri.maprri.raster.simulation.Poi;
+import si.um.feri.maprri.raster.simulation.SmellParticle;
 import si.um.feri.maprri.raster.simulation.TrashParticle;
 import si.um.feri.maprri.raster.utils.Constants;
 import si.um.feri.maprri.raster.utils.Geolocation;
@@ -82,6 +83,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
     private SpriteBatch batch;
     private Texture pinBin;
+    private Texture pinBinFull;
     private Texture pinDisposal;
     private Texture pinRecycle;
     private Texture myLocation;
@@ -100,6 +102,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private Image weatherIcon;
     private Label weatherTemp;
     private Texture weatherTexture;
+    private Texture smellTex;
 
     private Texture buttonBin;
     private Texture buttonEcoIsland;
@@ -208,6 +211,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         Texture plusTexture = new Texture("plus.png");
         Texture minusTexture = new Texture("minus.png");
+        smellTex = new Texture("garbage-assets/particles/particle.png");
 
         ImageButton zoomInButton = new ImageButton(new TextureRegionDrawable(new TextureRegion(plusTexture)));
         zoomInButton.setSize(40, 40);
@@ -484,6 +488,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         batch = new SpriteBatch();
         pinBin = new Texture("garbage-assets/bins/blue-bin-01.png");
+        pinBinFull = new Texture("garbage-assets/bins/blue-bin-04.png");
         pinDisposal = new Texture("garbage-assets/bins/red-bin-01.png");
         pinRecycle = new Texture("garbage-assets/bins/green-bin-01.png");
         myLocation = new Texture("my-location.png");
@@ -497,6 +502,35 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         filterPOIsToMapBounds(allObjects);
 
         initSimulationBins();
+
+        new Thread(() -> {
+            try {
+                MapDataService statusService = new MapDataService();
+                List<MapDataService.BinStatus> statuses = statusService.fetchBinStatuses();
+
+                java.util.HashMap<String, String> statusMap = new java.util.HashMap<>();
+                for (MapDataService.BinStatus s : statuses) {
+                    statusMap.put(s.poiId, s.status);
+                }
+
+                Gdx.app.postRunnable(() -> {
+                    for (Poi p : simulatedBins) {
+                        if (p.poi != null && "bin".equals(p.poi.type)) {
+                            p.status = statusMap.get(p.poi.id);
+                        }
+                    }
+                    updateInfoPanel();
+                });
+
+                System.out.println("BIN STATUSES FROM API: " + statuses.size());
+                for (MapDataService.BinStatus s : statuses) {
+                    System.out.println("API status: poiId=" + s.poiId + " status=" + s.status);
+                }
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }).start();
 
         for(Poi bin : simulatedBins){
             if(bin.poi.type.equals("bin")){
@@ -587,6 +621,17 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
     private void drawProgressBar(SpriteBatch batch, Poi bin, float x, float y, float barWidthCurrent, float barHeightCurrent) {
         if (!simulationMode) return;
 
+        if (bin.fill >= 0.6f) {
+            float size = markerSizeCurrent * 0.35f;
+
+            for (SmellParticle sp : bin.smellParticles) {
+                batch.setColor(1f, 1f, 1f, sp.alpha);
+                batch.draw(sp.texture, sp.position.x - size/2f, sp.position.y - size/2f, size, size);
+            }
+
+            batch.setColor(Color.WHITE);
+        }
+
         float filled = bin.fill;
         float urgency = bin.urgency;
 
@@ -663,43 +708,57 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
         for (Poi bin : simulatedBins) {
             MapObject o = bin.poi;
 
-            if ((o.type.equals("bin") && binVisible) ||
-                (o.type.equals("eco-island") && ecoIslandVisible) ||
-                (o.type.equals("disposal-site") && disposalSiteVisible)) {
-                Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
-                Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
-                float size = markerSizeCurrent;
-                float screenX = pos.x - size / 2f;
-                float screenY = pos.y - size / 2f;
+            if (!simulationMode){
+                if ((o.type.equals("bin") && binVisible) ||
+                    (o.type.equals("eco-island") && ecoIslandVisible) ||
+                    (o.type.equals("disposal-site") && disposalSiteVisible)) {
+                    Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
+                    Texture tex;
+                    if (!simulationMode && "bin".equals(o.type) && "full".equals(bin.status) && o != selectedPOI) {
+                        tex = pinBinFull;
+                    } else {
+                        tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
+                    }
+                    float size = markerSizeCurrent;
+                    float screenX = pos.x - size / 2f;
+                    float screenY = pos.y - size / 2f;
 
-                batch.draw(tex, screenX, screenY, size, size);
+                    batch.draw(tex, screenX, screenY, size, size);
+                }
+                continue;
+            } else {
+                if ((o.type.equals("bin") && binVisible) ||
+                    (o.type.equals("eco-island") && ecoIslandVisible) ||
+                    (o.type.equals("disposal-site") && disposalSiteVisible)) {
+                    Vector2 pos = MapRasterTiles.getPixelPosition(o.lat, o.lon, beginTile.x, beginTile.y);
+                    Texture tex = (o == selectedPOI) ? myLocation : iconMap.getOrDefault(o.type, pinBin);
+                    float size = markerSizeCurrent;
+                    float screenX = pos.x - size / 2f;
+                    float screenY = pos.y - size / 2f;
 
-                if(camera.zoom<1f){
-                    drawProgressBar(batch, bin, pos.x,screenY,barWidthCurrent, barHeightCurrent);
+                    batch.draw(tex, screenX, screenY, size, size);
+
+                    if (camera.zoom < 1f) {
+                        drawProgressBar(batch, bin, pos.x, screenY, barWidthCurrent, barHeightCurrent);
+                    }
+                }
+
+                Vector2 pos = MapRasterTiles.getPixelPositionPrecise(o.lat, o.lon, beginTile.x, beginTile.y);
+
+                int frameIndex = MathUtils.clamp((int) (bin.fill * bin.fillTextures.length), 0, bin.fillTextures.length - 1);
+                Texture tex = bin.fillTextures[frameIndex];
+
+                batch.draw(tex, pos.x - markerSizeCurrent / 2f, pos.y - markerSizeCurrent / 2f, markerSizeCurrent, markerSizeCurrent);
+
+                if (camera.zoom < 1f) {
+                    for (TrashParticle p : bin.particles) {
+                        batch.draw(p.texture, p.position.x, p.position.y, markerSizeCurrent * 0.8f, markerSizeCurrent * 0.8f);
+                    }
                 }
             }
-
-            Vector2 pos = MapRasterTiles.getPixelPositionPrecise(o.lat, o.lon, beginTile.x, beginTile.y);
-
-            int frameIndex = MathUtils.clamp((int)(bin.fill * bin.fillTextures.length), 0, bin.fillTextures.length-1);
-            Texture tex = bin.fillTextures[frameIndex];
-
-            batch.draw(tex, pos.x - markerSizeCurrent/2f, pos.y - markerSizeCurrent/2f, markerSizeCurrent, markerSizeCurrent);
-
-            if(camera.zoom<1f){
-                for(TrashParticle p : bin.particles){
-                    batch.draw(p.texture, p.position.x, p.position.y, markerSizeCurrent*0.8f, markerSizeCurrent*0.8f);
-                }
-            }
-
         }
-
-
-
         batch.end();
     }
-
-
 
     private void filterPOIsToMapBounds(java.util.List<MapObject> all) {
         poiObjects = new ArrayList<>();
@@ -731,6 +790,7 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             }
         }
     }
+
     private void updateBinsInRange() {
         float RANGE = 150f;
 
@@ -764,8 +824,6 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
             bin.fillRate = rate;
         }
     }
-
-
 
     private void updateSimulation(float delta) {
         if (!simulationMode) return;
@@ -830,15 +888,70 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
                     p.texture.dispose();
                 }
             }
+
+            if (bin.fill >= 0.6f) {
+                float intensity = (bin.fill - 0.6f) / 0.4f;
+                float spawnChance = 0.03f + 0.12f * intensity;
+
+                if (MathUtils.random() < spawnChance) {
+                    Vector2 binPos = MapRasterTiles.getPixelPosition(bin.poi.lat, bin.poi.lon, beginTile.x, beginTile.y);
+
+                    Vector2 start = new Vector2(
+                        binPos.x + MathUtils.random(-markerSizeCurrent * 0.12f, markerSizeCurrent * 0.12f),
+                        binPos.y + markerSizeCurrent * 0.20f
+                    );
+
+                    Vector2 vel = new Vector2(
+                        MathUtils.random(-8f, 8f),
+                        MathUtils.random(16f, 28f)
+                    );
+
+                    float life = MathUtils.random(1.2f, 2.0f);
+
+                    bin.smellParticles.add(new SmellParticle(smellTex, start, vel, life));
+                }
+            }
+
+            for (int i = bin.smellParticles.size - 1; i >= 0; i--) {
+                SmellParticle sp = bin.smellParticles.get(i);
+                if (sp.update(delta)) {
+                    bin.smellParticles.removeIndex(i);
+                }
+            }
+
         }
     }
-
-
 
     private void updateInfoPanel() {
         if (selectedPOI != null) {
             String typeDisplay = selectedPOI.type;
-            infoLabel.setText("Tip: " + typeDisplay + "\nKoordinate: " + String.format("%.6f", selectedPOI.lat) + ", " + String.format("%.6f", selectedPOI.lon));
+
+            String baseText =
+                "Tip: " + typeDisplay +
+                    "\nKoordinate: " + String.format("%.6f", selectedPOI.lat) + ", " + String.format("%.6f", selectedPOI.lon);
+
+            if (!simulationMode && "bin".equals(selectedPOI.type)) {
+                String s = null;
+
+                for (Poi p : simulatedBins) {
+                    if (p.poi != null &&
+                        p.poi.id != null &&
+                        p.poi.id.equals(selectedPOI.id)) {
+                        s = p.status;
+                        break;
+                    }
+                }
+
+                String statusText;
+                if (s == null) statusText = "brez statusa";
+                else if ("full".equals(s)) statusText = "polno";
+                else if ("empty".equals(s)) statusText = "prazno";
+                else statusText = s;
+
+                infoLabel.setText(baseText + "\nStatus: " + statusText);
+            } else {
+                infoLabel.setText(baseText);
+            }
         } else {
             infoLabel.setText("Selektiran marker");
         }
@@ -852,7 +965,9 @@ public class RasterMap extends ApplicationAdapter implements GestureDetector.Ges
 
         if (batch != null) batch.dispose();
         if (pinBin != null) pinBin.dispose();
+        if (pinBinFull != null) pinBinFull.dispose();
         if (pinDisposal != null) pinDisposal.dispose();
+        if (smellTex != null) smellTex.dispose();
         if (pinRecycle != null) pinRecycle.dispose();
         if (myLocation != null) myLocation.dispose();
         if (backgroundTexture != null) backgroundTexture.dispose();
