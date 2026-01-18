@@ -28,6 +28,9 @@
             android:name=".ui.temperature.TemperatureActivity"
             android:exported="false" />
         <activity
+            android:name=".ui.geiger.GeigerActivity"
+            android:exported="false" />
+        <activity
             android:name=".ui.camera.CameraActivity"
             android:exported="false" />
         <activity

@@ -58,6 +58,17 @@
 
     <string name="sensor_temperature">Temperature</string>
     <string name="sensor_camera">Camera</string>
+    <string name="sensor_geiger">Geiger</string>
+
+    <string name="geiger_sensor">Geiger Counter</string>
+    <string name="current_radiation">Trenutna radiacija:</string>
+    <string name="geiger_unit">CPM</string>
+    <string name="geiger_range">Razpon CPM:</string>
+    <string name="min_cpm_hint">Min (0)</string>
+    <string name="max_cpm_hint">Max (100)</string>
+    <string name="geiger_capture_started">Začeto zajemanje radiacije vsakih %1$d %2$s</string>
+    <string name="geiger_capture_stopped">Ustavljeno zajemanje radiacije</string>
+    <string name="error_cpm_range">Minimalna vrednost CPM mora biti manjša od maksimalne</string>
 
     <string name="location_not_available">Lokacija ni na voljo</string>
     <string name="location_unknown_short">Neznana</string>

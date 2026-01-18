@@ -20,6 +20,7 @@ class App : Application() {
                 Log.d("APP_MQTT", "connected")
                 ensureGlobalSubscriptions()
                 ensureTempNotifierInstalled()
+                ensureGeigerNotifierInstalled()
             },
             onError = { e -> Log.e("APP_MQTT", "connect error", e) },
             onMessage = { _, _ -> }
@@ -40,7 +41,13 @@ class App : Application() {
         sub("ekopin/real/pollution_tags/added")
         sub("ekopin/real/pollution_tags/deleted")
 
-        sub("ekopin/+/temperature/record")
+        // Naroči se na temperature record iz obeh načinov
+        sub("ekopin/sim/temperature/record")
+        sub("ekopin/real/temperature/record")
+
+        // Naroči se na geiger record iz obeh načinov
+        sub("ekopin/sim/geiger/record")
+        sub("ekopin/real/geiger/record")
 
         Log.d("APP_MQTT", "Global subscriptions ensured")
     }
@@ -52,5 +59,14 @@ class App : Application() {
 
         TemperatureRecordNotifier.installOnce(applicationContext, mqtt)
         Log.d("APP_MQTT", "Temp record notifier installed")
+    }
+
+    private fun ensureGeigerNotifierInstalled() {
+        val mqtt = MqttProvider.mqtt ?: return
+        if (MqttProvider.geigerNotifierInstalled) return
+        MqttProvider.geigerNotifierInstalled = true
+
+        GeigerRecordNotifier.installOnce(applicationContext, mqtt)
+        Log.d("APP_MQTT", "Geiger record notifier installed")
     }
 }

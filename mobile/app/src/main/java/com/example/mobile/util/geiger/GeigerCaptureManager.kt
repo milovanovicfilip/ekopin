@@ -1,4 +1,4 @@
-package com.example.mobile.util.temperature
+package com.example.mobile.util.geiger
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -18,7 +18,7 @@ import java.util.Locale
 import java.util.Random
 
 @SuppressLint("StaticFieldLeak")
-object TemperatureCaptureManager {
+object GeigerCaptureManager {
 
     private var handler: Handler? = null
     private var captureRunnable: Runnable? = null
@@ -26,16 +26,16 @@ object TemperatureCaptureManager {
     private var context: Context? = null
     private var locationHelper: LocationHelper? = null
 
-    private var minTemp = -20.0
-    private var maxTemp = 36.0
+    private var minCpm = 0.0
+    private var maxCpm = 100.0
     private var frequencyValue = 10
     private var frequencyUnit = "minut"
 
     private val random = Random()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
-    @Volatile private var lastTemperature: Double? = null
-    fun getLastTemperature(): Double? = lastTemperature
+    @Volatile private var lastCpm: Double? = null
+    fun getLastCpm(): Double? = lastCpm
 
     private var publisher: ((topic: String, payload: String) -> Unit)? = null
 
@@ -56,28 +56,28 @@ object TemperatureCaptureManager {
     fun startCapturing(
         frequencyValue: Int,
         frequencyUnit: String,
-        minTemp: Double,
-        maxTemp: Double
+        minCpm: Double,
+        maxCpm: Double
     ) {
         if (handler == null || context == null) return
-        if (minTemp >= maxTemp) return
+        if (minCpm >= maxCpm) return
 
         stopCapturing()
 
         this.frequencyValue = frequencyValue
         this.frequencyUnit = frequencyUnit
-        this.minTemp = minTemp
-        this.maxTemp = maxTemp
+        this.minCpm = minCpm
+        this.maxCpm = maxCpm
         this.isCapturing = true
 
-        captureTemperature()
+        captureGeiger()
 
         val intervalMillis = computeIntervalMillis(frequencyValue, frequencyUnit)
 
         captureRunnable = object : Runnable {
             override fun run() {
                 if (isCapturing) {
-                    captureTemperature()
+                    captureGeiger()
                     handler?.postDelayed(this, intervalMillis)
                 }
             }
@@ -113,21 +113,21 @@ object TemperatureCaptureManager {
         }
     }
 
-    private fun captureTemperature() {
+    private fun captureGeiger() {
         val ctx = context ?: return
         val locHelper = locationHelper ?: return
 
         scope.launch(Dispatchers.IO) {
             val location = locHelper.getCurrentLocation()
 
-            val temperature = minTemp + (maxTemp - minTemp) * random.nextDouble()
-            lastTemperature = temperature
+            val cpm = minCpm + (maxCpm - minCpm) * random.nextDouble()
+            lastCpm = cpm
 
-            val tempFormatted = String.Companion.format(Locale.getDefault(), "%.2f", temperature)
+            val cpmFormatted = String.Companion.format(Locale.getDefault(), "%.2f", cpm)
 
             SensorDataLogger.logSensorData(
-                sensorType = ctx.getString(R.string.sensor_temperature),
-                value = "$tempFormatted ${ctx.getString(R.string.temperature_unit)}",
+                sensorType = ctx.getString(R.string.sensor_geiger),
+                value = "$cpmFormatted ${ctx.getString(R.string.geiger_unit)}",
                 location = location
             )
 
@@ -135,12 +135,12 @@ object TemperatureCaptureManager {
             
             // Upoštevaj globalno nastavitev sim/real
             val mode = if (SimPrefs.isEnabled(ctx)) "sim" else "real"
-            val topic = "ekopin/$mode/temperature/add"
+            val topic = "ekopin/$mode/geiger/add"
 
             val payload = JSONObject().apply {
                 put("deviceId", deviceId)
                 put("ts", System.currentTimeMillis())
-                put("value", temperature)
+                put("value", cpm)
                 if (location != null) {
                     put("lat", location.latitude)
                     put("lng", location.longitude)
@@ -152,14 +152,14 @@ object TemperatureCaptureManager {
         }
     }
 
-    fun getCurrentSettings(): TemperatureSettings {
-        return TemperatureSettings(frequencyValue, frequencyUnit, minTemp, maxTemp)
+    fun getCurrentSettings(): GeigerSettings {
+        return GeigerSettings(frequencyValue, frequencyUnit, minCpm, maxCpm)
     }
 
-    data class TemperatureSettings(
+    data class GeigerSettings(
         val frequencyValue: Int,
         val frequencyUnit: String,
-        val minTemp: Double,
-        val maxTemp: Double
+        val minCpm: Double,
+        val maxCpm: Double
     )
 }

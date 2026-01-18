@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:padding="16dp"
+    android:background="#F5F6FA"
+    tools:context=".ui.geiger.GeigerActivity">
+
+    <TextView
+        android:id="@+id/tvTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Geiger Counter"
+        android:textColor="#1B5E20"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardCurrent"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="24dp">
+
+            <TextView
+                android:id="@+id/tvCurrentCpmLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Trenutna radiacija:"
+                android:textSize="16sp"
+                android:textColor="#666666"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvCurrentCpm"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="-- CPM"
+                android:textSize="48sp"
+                android:textStyle="bold"
+                android:textColor="#1B5E20"
+                android:layout_marginTop="8dp"
+                app:layout_constraintTop_toBottomOf="@id/tvCurrentCpmLabel"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvLastUpdate"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Zadnja posodobitev: --"
+                android:textSize="12sp"
+                android:textColor="#999999"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tvCurrentCpm"
+                app:layout_constraintStart_toStartOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cardSettings"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="6dp"
+        app:cardBackgroundColor="#FFFFFF"
+        app:layout_constraintTop_toBottomOf="@id/cardCurrent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="16dp">
+
+            <TextView
+                android:id="@+id/tvSettingsTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nastavitve zajemanja"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:textColor="#1B5E20"
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <TextView
+                android:id="@+id/tvFrequencyLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Frekvenca zajemanja:"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@id/tvSettingsTitle"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <EditText
+                android:id="@+id/etFrequency"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="10"
+                android:inputType="number"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="@android:drawable/edit_text"
+                app:layout_constraintTop_toBottomOf="@id/tvFrequencyLabel"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/spUnit" />
+
+            <Spinner
+                android:id="@+id/spUnit"
+                android:layout_width="120dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginTop="8dp"
+                app:layout_constraintTop_toBottomOf="@id/tvFrequencyLabel"
+                app:layout_constraintStart_toEndOf="@id/etFrequency"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <TextView
+                android:id="@+id/tvRangeLabel"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Razpon CPM:"
+                android:textSize="14sp"
+                android:textColor="#666666"
+                android:layout_marginTop="16dp"
+                app:layout_constraintTop_toBottomOf="@id/etFrequency"
+                app:layout_constraintStart_toStartOf="parent" />
+
+            <EditText
+                android:id="@+id/etMinCpm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Min (0)"
+                android:inputType="numberDecimal"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="@android:drawable/edit_text"
+                app:layout_constraintTop_toBottomOf="@id/tvRangeLabel"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/etMaxCpm"
+                app:layout_constraintWidth_percent="0.48" />
+
+            <EditText
+                android:id="@+id/etMaxCpm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:hint="Max (100)"
+                android:inputType="numberDecimal"
+                android:textSize="16sp"
+                android:layout_marginTop="8dp"
+                android:padding="12dp"
+                android:background="@android:drawable/edit_text"
+                app:layout_constraintTop_toBottomOf="@id/tvRangeLabel"
+                app:layout_constraintStart_toEndOf="@id/etMinCpm"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintWidth_percent="0.48" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStart"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Začni zajemanje"
+                android:textSize="16sp"
+                android:layout_marginTop="24dp"
+                app:cornerRadius="8dp"
+                app:layout_constraintTop_toBottomOf="@id/etMinCpm"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnStop"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:text="Ustavi zajemanje"
+                android:textSize="16sp"
+                android:layout_marginTop="12dp"
+                android:enabled="false"
+                app:cornerRadius="8dp"
+                app:layout_constraintTop_toBottomOf="@id/btnStart"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintEnd_toEndOf="parent" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnBack"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Nazaj"
+        android:layout_marginTop="16dp"
+        app:cornerRadius="8dp"
+        app:layout_constraintTop_toBottomOf="@id/cardSettings"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <ScrollView
+        android:id="@+id/svLog"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:layout_marginTop="16dp"
+        android:background="#FFFFFF"
+        android:padding="8dp"
+        app:layout_constraintTop_toBottomOf="@id/btnBack"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Log podatkov:\n"
+            android:textSize="12sp"
+            android:textColor="#333333"
+            android:fontFamily="monospace" />
+    </ScrollView>
+
+</androidx.constraintlayout.widget.ConstraintLayout>
