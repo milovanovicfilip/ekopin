@@ -82,4 +82,29 @@
     <string name="location_na">N/A</string>
 
     <string name="simulation_toggle">Simulacija</string>
+
+    <!-- Settings -->
+    <string name="theme_settings">Nastavitve teme</string>
+    <string name="select_theme">Izberi temo:</string>
+    <string name="theme_light">Svetla tema</string>
+    <string name="theme_dark">Temna tema</string>
+    <string name="theme_system">Sistemska tema</string>
+    <string name="apply_theme">Uporabi temo</string>
+    
+    <string name="sim_location_settings">Nastavitve simulirane lokacije</string>
+    <string name="sim_location_label">Simulirana lokacija:</string>
+    <string name="sim_location_hint">npr. Koroška cesta 46, Maribor</string>
+    <string name="save_location">Shrani lokacijo</string>
+    <string name="location_saved">✓ Lokacija shranjena</string>
+    <string name="pick_location_on_map">📍 Izberi lokacijo na zemljevidu</string>
+    <string name="no_location_set">Ni nastavljene lokacije</string>
+    
+    <!-- Location Picker Dialog -->
+    <string name="select_location">Izberi lokacijo</string>
+    <string name="manual_coordinates">Vnesi koordinate:</string>
+    <string name="latitude">Širina (Latitude)</string>
+    <string name="longitude">Dolžina (Longitude)</string>
+    <string name="set_coordinates">Nastavi koordinate</string>
+    <string name="cancel">Prekliči</string>
+    <string name="confirm">Potrdi</string>
 </resources>

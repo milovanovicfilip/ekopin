@@ -132,6 +132,8 @@ dependencies {
     implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
     implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
 
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
+
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation("com.github.hannesa2:paho.mqtt.android:4.2.3")
 }

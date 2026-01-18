@@ -79,6 +79,10 @@ class MainActivity : AppCompatActivity(), CoroutineScope, AndroidFragmentApplica
             startActivity(Intent(this, SensorsActivity::class.java))
         }
 
+        binding.tileSettings.setOnClickListener {
+            startActivity(Intent(this, com.example.mobile.ui.settings.SettingsActivity::class.java))
+        }
+
         updateTimeAndLocation()
         startTimeUpdate()
     }
