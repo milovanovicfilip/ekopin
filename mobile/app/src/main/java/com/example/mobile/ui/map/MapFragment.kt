@@ -29,6 +29,8 @@ class MapFragment : AndroidFragmentApplication() {
 
     private var mqttListener: ((String, String) -> Unit)? = null
     private var listRespTopic: String? = null
+    private var addedTopicSub: String? = null
+    private var deletedTopicSub: String? = null
     private var mode: String = "real"
 
     private var appRef: MapGdxApp? = null
@@ -55,7 +57,7 @@ class MapFragment : AndroidFragmentApplication() {
         val btnList = root.findViewById<View>(R.id.btn_home)
         val btnAddReport = root.findViewById<View>(R.id.btn_layers)
 
-        mode = if (SimPrefs.isEnabled(requireContext())) "sim" else "real"
+        updateMode()
 
         val greenBytes = drawableToPngBytes(R.drawable.marker)
         val redPickBytes = drawableToPngBytes(R.drawable.marker_moveable)
@@ -114,37 +116,120 @@ class MapFragment : AndroidFragmentApplication() {
             startActivity(Intent(requireContext(), ReportsActivity::class.java))
         }
 
+        val btnZoomIn = root.findViewById<View>(R.id.btn_zoom_in)
+        val btnZoomOut = root.findViewById<View>(R.id.btn_zoom_out)
+
+        btnZoomIn.setOnClickListener {
+            appRef?.let { app ->
+                com.badlogic.gdx.Gdx.app.postRunnable {
+                    app.zoomIn()
+                }
+            }
+        }
+
+        btnZoomOut.setOnClickListener {
+            appRef?.let { app ->
+                com.badlogic.gdx.Gdx.app.postRunnable {
+                    app.zoomOut()
+                }
+            }
+        }
+
         card.visibility = View.GONE
         return root
     }
 
+    override fun onResume() {
+        super.onResume()
+        val newMode = if (SimPrefs.isEnabled(requireContext())) "sim" else "real"
+        if (newMode != mode) {
+            Log.d("MAP", "Mode changed from $mode to $newMode, reloading data")
+            updateMode()
+            reloadPollutionTags()
+        }
+    }
+
+    private fun updateMode() {
+        mode = if (SimPrefs.isEnabled(requireContext())) "sim" else "real"
+        Log.d("MAP", "Current mode: $mode")
+    }
+
+    private fun reloadPollutionTags() {
+        val mqtt = MqttProvider.mqtt
+        if (mqtt == null || !mqtt.isConnected()) {
+            Log.w("MAP", "Cannot reload: MQTT not connected")
+            return
+        }
+
+        // Unsubscribe from old topics
+        addedTopicSub?.let { mqtt.unsubscribe(it) { } }
+        deletedTopicSub?.let { mqtt.unsubscribe(it) { } }
+        listRespTopic?.let { mqtt.unsubscribe(it) { } }
+
+        // Clear existing markers
+        tagById.clear()
+        appRef?.let { app ->
+            com.badlogic.gdx.Gdx.app.postRunnable {
+                app.setDots(emptyList())
+            }
+        }
+
+        // Setup MQTT with new mode
+        appRef?.let { setupMqtt(it) }
+    }
+
     private fun setupMqtt(createdApp: MapGdxApp) {
         val mqtt = MqttProvider.mqtt
-        if (mqtt == null || !mqtt.isConnected()) return
+        if (mqtt == null || !mqtt.isConnected()) {
+            Log.e("MAP", "MQTT not available or not connected")
+            return
+        }
 
         val deviceId = android.os.Build.MODEL ?: "android"
         val reqId = System.currentTimeMillis().toString()
 
         val listReqTopic = "ekopin/$mode/pollution_tags/list/request"
         val respTopic = "ekopin/$mode/pollution_tags/list/response/$deviceId/$reqId"
+        val addedTopic = "ekopin/$mode/pollution_tags/added"
+        val deletedTopic = "ekopin/$mode/pollution_tags/deleted"
+        
+        Log.d("MAP", "Setting up MQTT for mode=$mode")
+        Log.d("MAP", "List request topic: $listReqTopic")
+        Log.d("MAP", "Response topic: $respTopic")
+        Log.d("MAP", "Added topic: $addedTopic")
+        Log.d("MAP", "Deleted topic: $deletedTopic")
+        
         listRespTopic = respTopic
+        addedTopicSub = addedTopic
+        deletedTopicSub = deletedTopic
 
         mqtt.subscribe(respTopic, qos = 1) { err ->
-            Log.e("MAP", "sub list resp fail", err)
+            if (err != null) {
+                Log.e("MAP", "sub list resp fail", err)
+            } else {
+                Log.d("MAP", "Successfully subscribed to response topic")
+            }
+        }
+        
+        mqtt.subscribe(addedTopic, qos = 1) { err ->
+            Log.e("MAP", "sub added fail", err)
+        }
+        
+        mqtt.subscribe(deletedTopic, qos = 1) { err ->
+            Log.e("MAP", "sub deleted fail", err)
         }
 
         val listener: (String, String) -> Unit = { topic, payload ->
             try {
-                val currentMode = if (SimPrefs.isEnabled(requireContext())) "sim" else "real"
-                val addedTopicNow = "ekopin/$currentMode/pollution_tags/added"
-                val deletedTopicNow = "ekopin/$currentMode/pollution_tags/deleted"
-
+                Log.d("MAP", "Received message on topic: $topic")
                 when (topic) {
-                    addedTopicNow -> {
+                    addedTopic -> {
+                        Log.d("MAP", "Processing added tag: $payload")
                         val o = JSONObject(payload)
                         val id = o.optString("_id").ifBlank { o.optLong("ts").toString() }
                         val lat = o.optDouble("lat").toFloat()
                         val lon = o.optDouble("lng").toFloat()
+                        Log.d("MAP", "Adding dot: id=$id, lat=$lat, lon=$lon")
                         tagById[id] = o
 
                         com.badlogic.gdx.Gdx.app.postRunnable {
@@ -152,7 +237,7 @@ class MapFragment : AndroidFragmentApplication() {
                         }
                     }
 
-                    deletedTopicNow -> {
+                    deletedTopic -> {
                         val o = JSONObject(payload)
                         val id = o.optString("id", "")
                         if (id.isNotBlank()) {
@@ -164,10 +249,12 @@ class MapFragment : AndroidFragmentApplication() {
                     }
 
                     respTopic -> {
+                        Log.d("MAP", "Processing list response: $payload")
                         val o = JSONObject(payload)
                         val items = o.optJSONArray("items")
 
                         if (items != null) {
+                            Log.d("MAP", "Found ${items.length()} items in response")
                             val dots = ArrayList<Triple<String, Float, Float>>(items.length())
                             val newMap = HashMap<String, JSONObject>(items.length())
 
@@ -176,6 +263,7 @@ class MapFragment : AndroidFragmentApplication() {
                                 val id = it.optString("_id").ifBlank { it.optLong("ts").toString() }
                                 val lat = it.optDouble("lat").toFloat()
                                 val lon = it.optDouble("lng").toFloat()
+                                Log.d("MAP", "Item $i: id=$id, lat=$lat, lon=$lon")
                                 dots.add(Triple(id, lat, lon))
                                 newMap[id] = it
                             }
@@ -204,8 +292,13 @@ class MapFragment : AndroidFragmentApplication() {
             put("reqId", reqId)
         }.toString()
 
+        Log.d("MAP", "Publishing list request to $listReqTopic with payload: $reqPayload")
         mqtt.publish(listReqTopic, reqPayload, qos = 1, retained = false) { err ->
-            Log.e("MAP", "publish list request fail", err)
+            if (err != null) {
+                Log.e("MAP", "publish list request fail", err)
+            } else {
+                Log.d("MAP", "Successfully published list request")
+            }
         }
     }
 
@@ -297,6 +390,12 @@ class MapFragment : AndroidFragmentApplication() {
 
         listRespTopic?.let { t -> mqtt?.unsubscribe(t) { } }
         listRespTopic = null
+        
+        addedTopicSub?.let { t -> mqtt?.unsubscribe(t) { } }
+        addedTopicSub = null
+        
+        deletedTopicSub?.let { t -> mqtt?.unsubscribe(t) { } }
+        deletedTopicSub = null
 
         appRef = null
     }

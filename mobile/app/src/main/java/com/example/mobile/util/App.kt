@@ -12,7 +12,6 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
 
-        // Apply saved theme on app start
         applyThemeFromPreferences()
 
         val brokerUri = "tcp://${BuildConfig.MQTT_HOST}:${BuildConfig.MQTT_PORT}"
@@ -56,11 +55,9 @@ class App : Application() {
         sub("ekopin/real/pollution_tags/added")
         sub("ekopin/real/pollution_tags/deleted")
 
-        // Naroči se na temperature record iz obeh načinov
         sub("ekopin/sim/temperature/record")
         sub("ekopin/real/temperature/record")
 
-        // Naroči se na geiger record iz obeh načinov
         sub("ekopin/sim/geiger/record")
         sub("ekopin/real/geiger/record")
 

@@ -2,6 +2,7 @@ package com.example.mobile.util.geiger
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import com.example.mobile.R
 import com.example.mobile.util.LocationHelper
 import com.example.mobile.util.SensorDataLogger
 import com.example.mobile.util.SimPrefs
+import com.example.mobile.util.SettingsPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -20,6 +22,9 @@ import java.util.Random
 @SuppressLint("StaticFieldLeak")
 object GeigerCaptureManager {
 
+    private const val REAL_MODE_MIN_CPM = 0.0
+    private const val REAL_MODE_MAX_CPM = 320.0
+
     private var handler: Handler? = null
     private var captureRunnable: Runnable? = null
     private var isCapturing = false
@@ -27,7 +32,7 @@ object GeigerCaptureManager {
     private var locationHelper: LocationHelper? = null
 
     private var minCpm = 0.0
-    private var maxCpm = 100.0
+    private var maxCpm = 320.0
     private var frequencyValue = 10
     private var frequencyUnit = "minut"
 
@@ -35,7 +40,10 @@ object GeigerCaptureManager {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     @Volatile private var lastCpm: Double? = null
+    @Volatile private var lastTimestamp: Long? = null
+    
     fun getLastCpm(): Double? = lastCpm
+    fun getLastTimestamp(): Long? = lastTimestamp
 
     private var publisher: ((topic: String, payload: String) -> Unit)? = null
 
@@ -118,10 +126,35 @@ object GeigerCaptureManager {
         val locHelper = locationHelper ?: return
 
         scope.launch(Dispatchers.IO) {
-            val location = locHelper.getCurrentLocation()
+            val isSimMode = SimPrefs.isEnabled(ctx)
 
-            val cpm = minCpm + (maxCpm - minCpm) * random.nextDouble()
+            val location = if (isSimMode) {
+                val simLocationStr = SettingsPrefs.getSimLocation(ctx)
+                if (simLocationStr.isNotBlank()) {
+                    val parts = simLocationStr.split(",")
+                    if (parts.size == 2) {
+                        val lat = parts[0].toDoubleOrNull()
+                        val lng = parts[1].toDoubleOrNull()
+                        if (lat != null && lng != null) {
+                            Location("").apply {
+                                latitude = lat
+                                longitude = lng
+                                accuracy = 0f
+                            }
+                        } else null
+                    } else null
+                } else null
+            } else {
+                locHelper.getCurrentLocation()
+            }
+
+            val effectiveMinCpm = if (isSimMode) minCpm else REAL_MODE_MIN_CPM
+            val effectiveMaxCpm = if (isSimMode) maxCpm else REAL_MODE_MAX_CPM
+            
+            val cpm = effectiveMinCpm + (effectiveMaxCpm - effectiveMinCpm) * random.nextDouble()
+            val timestamp = System.currentTimeMillis()
             lastCpm = cpm
+            lastTimestamp = timestamp
 
             val cpmFormatted = String.Companion.format(Locale.getDefault(), "%.2f", cpm)
 
@@ -133,8 +166,7 @@ object GeigerCaptureManager {
 
             val deviceId = Build.MODEL ?: "android"
             
-            // Upoštevaj globalno nastavitev sim/real
-            val mode = if (SimPrefs.isEnabled(ctx)) "sim" else "real"
+            val mode = if (isSimMode) "sim" else "real"
             val topic = "ekopin/$mode/geiger/add"
 
             val payload = JSONObject().apply {
@@ -149,6 +181,50 @@ object GeigerCaptureManager {
             }.toString()
 
             publisher?.invoke(topic, payload)
+
+            if (cpm > 300.0 && location != null) {
+                publishExtremeRadiationAlert(ctx, mode, location, cpm)
+            }
+        }
+    }
+
+    private fun publishExtremeRadiationAlert(ctx: Context, mode: String, location: Location, cpm: Double) {
+        val deviceId = Build.MODEL ?: "android"
+        val topic = "ekopin/$mode/pollution_tags/add"
+        
+        val imageBase64 = encodeDefaultImage(ctx)
+        
+        val payload = JSONObject().apply {
+            put("deviceId", deviceId)
+            put("label", "Izjemno visoka količina radioaktivnega sevanja zaznana")
+            put("description", "Možna nevarnost po radioaktivni zastrupitvi. Zaznana radioaktivnost: ${String.format(Locale.getDefault(), "%.1f", cpm)} CPM")
+            put("severity", "Visoka")
+            put("lat", location.latitude)
+            put("lng", location.longitude)
+            put("ts", System.currentTimeMillis())
+            put("mode", mode)
+            if (imageBase64 != null) {
+                put("imageBase64", imageBase64)
+                put("imageMime", "image/jpeg")
+            }
+        }.toString()
+        
+        publisher?.invoke(topic, payload)
+        android.util.Log.d("GeigerCapture", "Published extreme radiation alert: $cpm CPM at (${location.latitude}, ${location.longitude})")
+    }
+
+    private fun encodeDefaultImage(ctx: Context): String? {
+        return try {
+            val bmp = android.graphics.BitmapFactory.decodeResource(ctx.resources, R.drawable.eventpic)
+            if (bmp != null) {
+                val out = java.io.ByteArrayOutputStream()
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+                val bytes = out.toByteArray()
+                android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            } else null
+        } catch (e: Exception) {
+            android.util.Log.e("GeigerCapture", "Failed to encode default image", e)
+            null
         }
     }
 

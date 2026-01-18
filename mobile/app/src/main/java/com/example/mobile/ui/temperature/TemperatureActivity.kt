@@ -18,6 +18,7 @@ import com.example.mobile.R
 import com.example.mobile.databinding.ActivityTemperatureBinding
 import com.example.mobile.util.temperature.TemperatureCaptureManager
 import com.example.mobile.util.mqtt.MqttManager
+import com.example.mobile.util.SimPrefs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,8 +84,17 @@ class TemperatureActivity : AppCompatActivity() {
 
         val settings = TemperatureCaptureManager.getCurrentSettings()
         binding.etFrequency.setText(settings.frequencyValue.toString())
-        binding.etMinTemp.setText(settings.minTemp.toString())
-        binding.etMaxTemp.setText(settings.maxTemp.toString())
+        
+        val isSimMode = SimPrefs.isEnabled(this)
+        if (isSimMode) {
+            binding.etMinTemp.setText(settings.minTemp.toString())
+            binding.etMaxTemp.setText(settings.maxTemp.toString())
+            binding.etMinTemp.visibility = View.VISIBLE
+            binding.etMaxTemp.visibility = View.VISIBLE
+        } else {
+            binding.etMinTemp.visibility = View.GONE
+            binding.etMaxTemp.visibility = View.GONE
+        }
 
         val unitIndex = when (settings.frequencyUnit.trim().lowercase(Locale.getDefault())) {
             getString(R.string.second).trim().lowercase(Locale.getDefault()), "sekund" -> 0
@@ -111,9 +121,11 @@ class TemperatureActivity : AppCompatActivity() {
 
     private fun startCapturing() {
         val frequencyValue = binding.etFrequency.text.toString().toIntOrNull() ?: 10
-        val minTemp = binding.etMinTemp.text.toString().toDoubleOrNull() ?: -20.0
-        val maxTemp = binding.etMaxTemp.text.toString().toDoubleOrNull() ?: 36.0
         val frequencyUnit = binding.spUnit.selectedItem.toString()
+        
+        val isSimMode = SimPrefs.isEnabled(this)
+        val minTemp = if (isSimMode) binding.etMinTemp.text.toString().toDoubleOrNull() ?: -20.0 else -20.0
+        val maxTemp = if (isSimMode) binding.etMaxTemp.text.toString().toDoubleOrNull() ?: 36.0 else 80.0
 
         if (minTemp >= maxTemp) {
             Toast.makeText(this, getString(R.string.error_temp_range), Toast.LENGTH_SHORT).show()
@@ -133,23 +145,26 @@ class TemperatureActivity : AppCompatActivity() {
         )
 
         updateUIState()
-        addLogEntry(getString(R.string.capture_started, frequencyValue, frequencyUnit))
     }
 
     private fun stopCapturing() {
         TemperatureCaptureManager.stopCapturing()
         updateUIState()
-        addLogEntry(getString(R.string.capture_stopped))
     }
 
     private fun updateUIState() {
         val isCapturing = TemperatureCaptureManager.isCapturing()
+        val isSimMode = SimPrefs.isEnabled(this)
+        
         binding.btnStart.isEnabled = !isCapturing
         binding.btnStop.isEnabled = isCapturing
         binding.etFrequency.isEnabled = !isCapturing
-        binding.etMinTemp.isEnabled = !isCapturing
-        binding.etMaxTemp.isEnabled = !isCapturing
         binding.spUnit.isEnabled = !isCapturing
+        
+        if (isSimMode) {
+            binding.etMinTemp.isEnabled = !isCapturing
+            binding.etMaxTemp.isEnabled = !isCapturing
+        }
     }
 
     private fun startUIUpdate() {
@@ -164,21 +179,14 @@ class TemperatureActivity : AppCompatActivity() {
 
     private fun updateTemperatureDisplay() {
         val t = TemperatureCaptureManager.getLastTemperature()
+        val ts = TemperatureCaptureManager.getLastTimestamp()
         if (t != null) {
             val tempFormatted = String.format(Locale.getDefault(), "%.2f", t)
             binding.tvCurrentTemp.text = "$tempFormatted ${getString(R.string.temperature_unit)}"
-            binding.tvLastUpdate.text = getString(R.string.last_update, dateFormat.format(Date()))
-        }
-    }
-
-    private fun addLogEntry(entry: String) {
-        val timestamp = dateFormat.format(Date())
-        val currentLog = binding.tvLog.text.toString()
-        val newLog = getString(R.string.log_entry_format, timestamp, entry) + currentLog.replace(getString(R.string.log_data), "")
-        binding.tvLog.text = getString(R.string.log_data) + newLog
-
-        binding.svLog.post {
-            binding.svLog.fullScroll(View.FOCUS_DOWN)
+            
+            if (ts != null) {
+                binding.tvLastUpdate.text = getString(R.string.last_update, dateFormat.format(Date(ts)))
+            }
         }
     }
 

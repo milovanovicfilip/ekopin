@@ -10,6 +10,7 @@ import com.example.mobile.databinding.ActivitySensorsBinding
 import com.example.mobile.ui.camera.CameraActivity
 import com.example.mobile.ui.geiger.GeigerActivity
 import com.example.mobile.ui.temperature.TemperatureActivity
+import com.example.mobile.util.SimPrefs
 import com.example.mobile.util.geiger.GeigerCaptureManager
 import com.example.mobile.util.mqtt.MqttProvider
 import com.example.mobile.util.temperature.TemperatureCaptureManager
@@ -143,27 +144,39 @@ class SensorsActivity : AppCompatActivity() {
     }
 
     private fun buildSensorsList(): List<Sensor> {
+        val isSimMode = SimPrefs.isEnabled(this)
+        
         val tempSettings = TemperatureCaptureManager.getCurrentSettings()
         val isTempCapturing = TemperatureCaptureManager.isCapturing()
 
-        val tempRangeText = String.format(
-            Locale.getDefault(),
-            "↝ Od %.2f do %.2f",
-            tempSettings.minTemp,
-            tempSettings.maxTemp
-        )
+        // V real mode ne prikazujemo razpona (hard-coded)
+        val tempRangeText = if (isSimMode) {
+            String.format(
+                Locale.getDefault(),
+                "↝ Od %.2f do %.2f",
+                tempSettings.minTemp,
+                tempSettings.maxTemp
+            )
+        } else {
+            "" // Prazen string za real mode
+        }
 
         val tempFrequencyText = "⏱ Vsakih ${tempSettings.frequencyValue} ${prettyUnit(tempSettings.frequencyValue, tempSettings.frequencyUnit)}"
 
         val geigerSettings = GeigerCaptureManager.getCurrentSettings()
         val isGeigerCapturing = GeigerCaptureManager.isCapturing()
 
-        val geigerRangeText = String.format(
-            Locale.getDefault(),
-            "↝ Od %.2f do %.2f CPM",
-            geigerSettings.minCpm,
-            geigerSettings.maxCpm
-        )
+        // V real mode ne prikazujemo razpona (hard-coded)
+        val geigerRangeText = if (isSimMode) {
+            String.format(
+                Locale.getDefault(),
+                "↝ Od %.2f do %.2f CPM",
+                geigerSettings.minCpm,
+                geigerSettings.maxCpm
+            )
+        } else {
+            "" // Prazen string za real mode
+        }
 
         val geigerFrequencyText = "⏱ Vsakih ${geigerSettings.frequencyValue} ${prettyUnit(geigerSettings.frequencyValue, geigerSettings.frequencyUnit)}"
 

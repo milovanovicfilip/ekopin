@@ -36,6 +36,13 @@ class SensorsAdapter(
         holder.frequency.text = sensor.frequency
         holder.location.text = sensor.location
 
+        // Skrij range če je prazen (real mode)
+        if (sensor.range.isBlank()) {
+            holder.range.visibility = View.GONE
+        } else {
+            holder.range.visibility = View.VISIBLE
+        }
+
         holder.enabled.setOnCheckedChangeListener(null)
         holder.enabled.isChecked = sensor.enabled
         holder.enabled.setOnCheckedChangeListener { _, isChecked ->

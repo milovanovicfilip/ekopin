@@ -18,6 +18,7 @@ import com.example.mobile.R
 import com.example.mobile.databinding.ActivityGeigerBinding
 import com.example.mobile.util.geiger.GeigerCaptureManager
 import com.example.mobile.util.mqtt.MqttManager
+import com.example.mobile.util.SimPrefs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -83,8 +84,17 @@ class GeigerActivity : AppCompatActivity() {
 
         val settings = GeigerCaptureManager.getCurrentSettings()
         binding.etFrequency.setText(settings.frequencyValue.toString())
-        binding.etMinCpm.setText(settings.minCpm.toString())
-        binding.etMaxCpm.setText(settings.maxCpm.toString())
+        
+        val isSimMode = SimPrefs.isEnabled(this)
+        if (isSimMode) {
+            binding.etMinCpm.setText(settings.minCpm.toString())
+            binding.etMaxCpm.setText(settings.maxCpm.toString())
+            binding.etMinCpm.visibility = View.VISIBLE
+            binding.etMaxCpm.visibility = View.VISIBLE
+        } else {
+            binding.etMinCpm.visibility = View.GONE
+            binding.etMaxCpm.visibility = View.GONE
+        }
 
         val unitIndex = when (settings.frequencyUnit.trim().lowercase(Locale.getDefault())) {
             getString(R.string.second).trim().lowercase(Locale.getDefault()), "sekund" -> 0
@@ -111,9 +121,11 @@ class GeigerActivity : AppCompatActivity() {
 
     private fun startCapturing() {
         val frequencyValue = binding.etFrequency.text.toString().toIntOrNull() ?: 10
-        val minCpm = binding.etMinCpm.text.toString().toDoubleOrNull() ?: 0.0
-        val maxCpm = binding.etMaxCpm.text.toString().toDoubleOrNull() ?: 100.0
         val frequencyUnit = binding.spUnit.selectedItem.toString()
+        
+        val isSimMode = SimPrefs.isEnabled(this)
+        val minCpm = if (isSimMode) binding.etMinCpm.text.toString().toDoubleOrNull() ?: 0.0 else 0.0
+        val maxCpm = if (isSimMode) binding.etMaxCpm.text.toString().toDoubleOrNull() ?: 100.0 else 320.0
 
         if (minCpm >= maxCpm) {
             Toast.makeText(this, getString(R.string.error_cpm_range), Toast.LENGTH_SHORT).show()
@@ -133,23 +145,26 @@ class GeigerActivity : AppCompatActivity() {
         )
 
         updateUIState()
-        addLogEntry(getString(R.string.geiger_capture_started, frequencyValue, frequencyUnit))
     }
 
     private fun stopCapturing() {
         GeigerCaptureManager.stopCapturing()
         updateUIState()
-        addLogEntry(getString(R.string.geiger_capture_stopped))
     }
 
     private fun updateUIState() {
         val isCapturing = GeigerCaptureManager.isCapturing()
+        val isSimMode = SimPrefs.isEnabled(this)
+        
         binding.btnStart.isEnabled = !isCapturing
         binding.btnStop.isEnabled = isCapturing
         binding.etFrequency.isEnabled = !isCapturing
-        binding.etMinCpm.isEnabled = !isCapturing
-        binding.etMaxCpm.isEnabled = !isCapturing
         binding.spUnit.isEnabled = !isCapturing
+        
+        if (isSimMode) {
+            binding.etMinCpm.isEnabled = !isCapturing
+            binding.etMaxCpm.isEnabled = !isCapturing
+        }
     }
 
     private fun startUIUpdate() {
@@ -164,21 +179,14 @@ class GeigerActivity : AppCompatActivity() {
 
     private fun updateGeigerDisplay() {
         val cpm = GeigerCaptureManager.getLastCpm()
+        val ts = GeigerCaptureManager.getLastTimestamp()
         if (cpm != null) {
             val cpmFormatted = String.format(Locale.getDefault(), "%.2f", cpm)
             binding.tvCurrentCpm.text = "$cpmFormatted ${getString(R.string.geiger_unit)}"
-            binding.tvLastUpdate.text = getString(R.string.last_update, dateFormat.format(Date()))
-        }
-    }
-
-    private fun addLogEntry(entry: String) {
-        val timestamp = dateFormat.format(Date())
-        val currentLog = binding.tvLog.text.toString()
-        val newLog = getString(R.string.log_entry_format, timestamp, entry) + currentLog.replace(getString(R.string.log_data), "")
-        binding.tvLog.text = getString(R.string.log_data) + newLog
-
-        binding.svLog.post {
-            binding.svLog.fullScroll(View.FOCUS_DOWN)
+            
+            if (ts != null) {
+                binding.tvLastUpdate.text = getString(R.string.last_update, dateFormat.format(Date(ts)))
+            }
         }
     }
 

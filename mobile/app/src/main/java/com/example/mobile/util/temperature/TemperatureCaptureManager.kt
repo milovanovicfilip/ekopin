@@ -2,6 +2,7 @@ package com.example.mobile.util.temperature
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.location.Location
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import com.example.mobile.R
 import com.example.mobile.util.LocationHelper
 import com.example.mobile.util.SensorDataLogger
 import com.example.mobile.util.SimPrefs
+import com.example.mobile.util.SettingsPrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -19,6 +21,8 @@ import java.util.Random
 
 @SuppressLint("StaticFieldLeak")
 object TemperatureCaptureManager {
+    private const val REAL_MODE_MIN_TEMP = -20.0
+    private const val REAL_MODE_MAX_TEMP = 80.0
 
     private var handler: Handler? = null
     private var captureRunnable: Runnable? = null
@@ -27,7 +31,7 @@ object TemperatureCaptureManager {
     private var locationHelper: LocationHelper? = null
 
     private var minTemp = -20.0
-    private var maxTemp = 36.0
+    private var maxTemp = 80.0
     private var frequencyValue = 10
     private var frequencyUnit = "minut"
 
@@ -35,7 +39,10 @@ object TemperatureCaptureManager {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
     @Volatile private var lastTemperature: Double? = null
+    @Volatile private var lastTimestamp: Long? = null
+    
     fun getLastTemperature(): Double? = lastTemperature
+    fun getLastTimestamp(): Long? = lastTimestamp
 
     private var publisher: ((topic: String, payload: String) -> Unit)? = null
 
@@ -118,10 +125,35 @@ object TemperatureCaptureManager {
         val locHelper = locationHelper ?: return
 
         scope.launch(Dispatchers.IO) {
-            val location = locHelper.getCurrentLocation()
+            val isSimMode = SimPrefs.isEnabled(ctx)
 
-            val temperature = minTemp + (maxTemp - minTemp) * random.nextDouble()
+            val location = if (isSimMode) {
+                val simLocationStr = SettingsPrefs.getSimLocation(ctx)
+                if (simLocationStr.isNotBlank()) {
+                    val parts = simLocationStr.split(",")
+                    if (parts.size == 2) {
+                        val lat = parts[0].toDoubleOrNull()
+                        val lng = parts[1].toDoubleOrNull()
+                        if (lat != null && lng != null) {
+                            Location("").apply {
+                                latitude = lat
+                                longitude = lng
+                                accuracy = 0f
+                            }
+                        } else null
+                    } else null
+                } else null
+            } else {
+                locHelper.getCurrentLocation()
+            }
+
+            val effectiveMinTemp = if (isSimMode) minTemp else REAL_MODE_MIN_TEMP
+            val effectiveMaxTemp = if (isSimMode) maxTemp else REAL_MODE_MAX_TEMP
+            
+            val temperature = effectiveMinTemp + (effectiveMaxTemp - effectiveMinTemp) * random.nextDouble()
+            val timestamp = System.currentTimeMillis()
             lastTemperature = temperature
+            lastTimestamp = timestamp
 
             val tempFormatted = String.Companion.format(Locale.getDefault(), "%.2f", temperature)
 
@@ -133,8 +165,7 @@ object TemperatureCaptureManager {
 
             val deviceId = Build.MODEL ?: "android"
             
-            // Upoštevaj globalno nastavitev sim/real
-            val mode = if (SimPrefs.isEnabled(ctx)) "sim" else "real"
+            val mode = if (isSimMode) "sim" else "real"
             val topic = "ekopin/$mode/temperature/add"
 
             val payload = JSONObject().apply {
@@ -149,6 +180,51 @@ object TemperatureCaptureManager {
             }.toString()
 
             publisher?.invoke(topic, payload)
+
+            // Check for extreme temperature and publish pollution_tag
+            if (temperature > 50.0 && location != null) {
+                publishExtremeTemperatureAlert(ctx, mode, location, temperature)
+            }
+        }
+    }
+
+    private fun publishExtremeTemperatureAlert(ctx: Context, mode: String, location: Location, temperature: Double) {
+        val deviceId = Build.MODEL ?: "android"
+        val topic = "ekopin/$mode/pollution_tags/add"
+        
+        val imageBase64 = encodeDefaultImage(ctx)
+        
+        val payload = JSONObject().apply {
+            put("deviceId", deviceId)
+            put("label", "Izjemno visoka temperatura zaznana")
+            put("description", "Možna nevarnost po požaru ali sproščanja toksinov. Zaznana temperatura: ${String.format(Locale.getDefault(), "%.1f", temperature)}°C")
+            put("severity", "Srednja")
+            put("lat", location.latitude)
+            put("lng", location.longitude)
+            put("ts", System.currentTimeMillis())
+            put("mode", mode)
+            if (imageBase64 != null) {
+                put("imageBase64", imageBase64)
+                put("imageMime", "image/jpeg")
+            }
+        }.toString()
+        
+        publisher?.invoke(topic, payload)
+        android.util.Log.d("TemperatureCapture", "Published extreme temperature alert: $temperature°C at (${location.latitude}, ${location.longitude})")
+    }
+
+    private fun encodeDefaultImage(ctx: Context): String? {
+        return try {
+            val bmp = android.graphics.BitmapFactory.decodeResource(ctx.resources, R.drawable.eventpic)
+            if (bmp != null) {
+                val out = java.io.ByteArrayOutputStream()
+                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 80, out)
+                val bytes = out.toByteArray()
+                android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+            } else null
+        } catch (e: Exception) {
+            android.util.Log.e("TemperatureCapture", "Failed to encode default image", e)
+            null
         }
     }
 
