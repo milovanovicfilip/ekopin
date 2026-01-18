@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="#F5F6FA"
+    android:background="?attr/colorSurface"
     tools:context=".ui.geiger.GeigerActivity">
 
     <TextView
@@ -27,7 +27,7 @@
         android:layout_marginTop="24dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:cardBackgroundColor="#FFFFFF"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -80,7 +80,7 @@
         android:layout_marginTop="24dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:cardBackgroundColor="#FFFFFF"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:layout_constraintTop_toBottomOf="@id/cardCurrent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -119,9 +119,11 @@
                 android:hint="10"
                 android:inputType="number"
                 android:textSize="16sp"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="8dp"
                 android:padding="12dp"
-                android:background="@android:drawable/edit_text"
+                android:background="?attr/colorSurfaceVariant"
                 app:layout_constraintTop_toBottomOf="@id/tvFrequencyLabel"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/spUnit" />
@@ -154,9 +156,11 @@
                 android:hint="Min (0)"
                 android:inputType="numberDecimal"
                 android:textSize="16sp"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="8dp"
                 android:padding="12dp"
-                android:background="@android:drawable/edit_text"
+                android:background="?attr/colorSurfaceVariant"
                 app:layout_constraintTop_toBottomOf="@id/tvRangeLabel"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toStartOf="@id/etMaxCpm"
@@ -169,9 +173,11 @@
                 android:hint="Max (100)"
                 android:inputType="numberDecimal"
                 android:textSize="16sp"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
                 android:layout_marginTop="8dp"
                 android:padding="12dp"
-                android:background="@android:drawable/edit_text"
+                android:background="?attr/colorSurfaceVariant"
                 app:layout_constraintTop_toBottomOf="@id/tvRangeLabel"
                 app:layout_constraintStart_toEndOf="@id/etMinCpm"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -220,7 +226,7 @@
         android:layout_width="0dp"
         android:layout_height="0dp"
         android:layout_marginTop="16dp"
-        android:background="#FFFFFF"
+        android:background="?attr/colorSurfaceVariant"
         android:padding="8dp"
         app:layout_constraintTop_toBottomOf="@id/btnBack"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -233,7 +239,7 @@
             android:layout_height="wrap_content"
             android:text="Log podatkov:\n"
             android:textSize="12sp"
-            android:textColor="#333333"
+            android:textColor="?attr/colorOnSurface"
             android:fontFamily="monospace" />
     </ScrollView>
 

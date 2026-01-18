@@ -4,7 +4,7 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:padding="16dp"
-    android:background="#FFFFFF">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvDialogTitle"
@@ -47,9 +47,11 @@
         android:hint="@string/latitude"
         android:inputType="numberDecimal|numberSigned"
         android:textSize="14sp"
+        android:textColor="?attr/colorOnSurface"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
         android:layout_marginTop="8dp"
         android:padding="12dp"
-        android:background="@android:drawable/edit_text"
+        android:background="?attr/colorSurfaceVariant"
         app:layout_constraintTop_toBottomOf="@id/tvManualInput"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/etLongitude"
@@ -62,9 +64,11 @@
         android:hint="@string/longitude"
         android:inputType="numberDecimal|numberSigned"
         android:textSize="14sp"
+        android:textColor="?attr/colorOnSurface"
+        android:textColorHint="?attr/colorOnSurfaceVariant"
         android:layout_marginTop="8dp"
         android:padding="12dp"
-        android:background="@android:drawable/edit_text"
+        android:background="?attr/colorSurfaceVariant"
         app:layout_constraintTop_toBottomOf="@id/tvManualInput"
         app:layout_constraintStart_toEndOf="@id/etLatitude"
         app:layout_constraintEnd_toEndOf="parent"

@@ -2,6 +2,7 @@ package com.example.mobile.util
 
 import android.app.Application
 import android.util.Log
+import androidx.appcompat.app.AppCompatDelegate
 import com.example.mobile.BuildConfig
 import com.example.mobile.util.mqtt.MqttManager
 import com.example.mobile.util.mqtt.MqttProvider
@@ -10,6 +11,9 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        // Apply saved theme on app start
+        applyThemeFromPreferences()
 
         val brokerUri = "tcp://${BuildConfig.MQTT_HOST}:${BuildConfig.MQTT_PORT}"
         val mqtt = MqttManager(applicationContext, brokerUri)
@@ -25,6 +29,17 @@ class App : Application() {
             onError = { e -> Log.e("APP_MQTT", "connect error", e) },
             onMessage = { _, _ -> }
         )
+    }
+
+    private fun applyThemeFromPreferences() {
+        val savedTheme = SettingsPrefs.getThemeMode(this)
+        val mode = when (savedTheme) {
+            SettingsPrefs.THEME_LIGHT -> AppCompatDelegate.MODE_NIGHT_NO
+            SettingsPrefs.THEME_DARK -> AppCompatDelegate.MODE_NIGHT_YES
+            SettingsPrefs.THEME_SYSTEM -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+            else -> AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM
+        }
+        AppCompatDelegate.setDefaultNightMode(mode)
     }
 
     private fun ensureGlobalSubscriptions() {

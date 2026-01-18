@@ -6,7 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="#F5F6FA"
+    android:background="?attr/colorSurface"
     tools:context=".ui.settings.SettingsActivity">
 
     <TextView
@@ -28,7 +28,7 @@
         android:layout_marginTop="24dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:cardBackgroundColor="#FFFFFF"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:layout_constraintTop_toBottomOf="@id/tvTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -93,7 +93,7 @@
         android:layout_marginTop="24dp"
         app:cardCornerRadius="16dp"
         app:cardElevation="6dp"
-        app:cardBackgroundColor="#FFFFFF"
+        app:cardBackgroundColor="?attr/colorSurfaceContainer"
         app:layout_constraintTop_toBottomOf="@id/cardTheme"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
@@ -131,10 +131,10 @@
                 android:layout_height="wrap_content"
                 android:text="@string/no_location_set"
                 android:textSize="16sp"
-                android:textColor="#333333"
+                android:textColor="?attr/colorOnSurface"
                 android:layout_marginTop="8dp"
                 android:padding="12dp"
-                android:background="#F5F5F5"
+                android:background="?attr/colorSurfaceVariant"
                 app:layout_constraintTop_toBottomOf="@id/tvSimLocationLabel"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintEnd_toEndOf="parent" />

@@ -83,7 +83,7 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     private fun parseLocation(location: String): Pair<Double, Double> {
-        if (location.isBlank()) return Pair(46.5547, 15.6467) // Default Maribor
+        if (location.isBlank()) return Pair(46.5547, 15.6467)
         
         val parts = location.split(",")
         if (parts.size != 2) return Pair(46.5547, 15.6467)
