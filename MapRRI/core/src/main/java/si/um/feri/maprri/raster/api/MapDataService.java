@@ -16,7 +16,7 @@ import si.um.feri.maprri.raster.utils.MapObject;
 
 public class MapDataService {
 
-    private static final String API_URL = "http://localhost:3000/api/poi";
+    private static final String API_URL = "http://74.242.216.220:3000/api/poi";
 
     public void updatePoiLocation(String poiId, double lat, double lon) {
         if (poiId == null || poiId.isEmpty()) return;
@@ -111,7 +111,7 @@ public class MapDataService {
     public List<BinStatus> fetchBinStatuses() {
         List<BinStatus> out = new ArrayList<>();
         try {
-            URL url = new URL("http://localhost:3000/api/binstatus/");
+            URL url = new URL("http://74.242.216.220:3000/api/binstatus/");
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
 
