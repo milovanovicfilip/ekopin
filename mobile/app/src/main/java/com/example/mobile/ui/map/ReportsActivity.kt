@@ -157,7 +157,7 @@ class ReportsActivity : AppCompatActivity() {
     private fun confirmDelete(tag: PollutionTag) {
         AlertDialog.Builder(this)
             .setTitle("Brisanje")
-            .setMessage("Res želiš izbrisati ta report?")
+            .setMessage("Res želiš izbrisati ta dogodek?")
             .setNegativeButton("Ne", null)
             .setPositiveButton("Da") { _, _ -> publishDelete(tag) }
             .show()

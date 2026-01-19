@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="16dp"
-    android:background="#F5F6FA">
+    android:background="?attr/colorSurface">
 
     <TextView
         android:id="@+id/tvTitle"
@@ -19,46 +19,6 @@
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.card.MaterialCardView
-        android:id="@+id/cardSensors"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        app:cardCornerRadius="16dp"
-        app:cardElevation="6dp"
-        app:cardBackgroundColor="#e6e6e6"
-        app:layout_constraintTop_toBottomOf="@id/tvTitle"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <androidx.constraintlayout.widget.ConstraintLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:padding="16dp">
-
-            <TextView
-                android:id="@+id/tvSensorTitle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="Status senzorjev"
-                android:textStyle="bold"
-                android:textSize="16sp"
-                app:layout_constraintTop_toTopOf="parent"
-                app:layout_constraintStart_toStartOf="parent"/>
-            <TextView
-                android:id="@+id/tvSensors"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:text="📍 GPS: ❌    📸 Kamera: ❌"
-                android:textSize="15sp"
-                app:layout_constraintTop_toBottomOf="@id/tvSensorTitle"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintEnd_toEndOf="parent"
-                android:layout_marginTop="8dp"/>
-
-        </androidx.constraintlayout.widget.ConstraintLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <com.google.android.material.card.MaterialCardView
         android:id="@+id/tileCamera"
         android:layout_width="0dp"
         android:layout_height="120dp"
@@ -66,8 +26,8 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground"
-        app:cardBackgroundColor="#e6e6e6"
-        app:layout_constraintTop_toBottomOf="@id/cardSensors"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/tileMap"
         app:layout_constraintWidth_percent="0.48"
@@ -83,7 +43,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_menu_camera"
-                app:tint="#1B5E20"
+                app:tint="?attr/colorOnSurface"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/txtCamera"
                 app:layout_constraintStart_toStartOf="parent"
@@ -95,7 +55,7 @@
                 android:layout_height="wrap_content"
                 android:text="Kamera"
                 android:textStyle="bold"
-                android:textColor="#1B5E20"
+                android:textColor="?attr/colorOnSurface"
                 app:layout_constraintTop_toBottomOf="@id/imgCamera"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -112,8 +72,8 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground"
-        app:cardBackgroundColor="#e6e6e6"
-        app:layout_constraintTop_toBottomOf="@id/cardSensors"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant"
+        app:layout_constraintTop_toBottomOf="@id/tvTitle"
         app:layout_constraintStart_toEndOf="@id/tileCamera"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintWidth_percent="0.48"
@@ -129,7 +89,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_dialog_map"
-                app:tint="#1B5E20"
+                app:tint="?attr/colorOnSurface"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/txtMap"
                 app:layout_constraintStart_toStartOf="parent"
@@ -141,7 +101,7 @@
                 android:layout_height="wrap_content"
                 android:text="Zemljevid"
                 android:textStyle="bold"
-                android:textColor="#1B5E20"
+                android:textColor="?attr/colorOnSurface"
                 app:layout_constraintTop_toBottomOf="@id/imgMap"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -155,7 +115,7 @@
         android:layout_width="0dp"
         android:layout_height="120dp"
         android:layout_marginTop="5dp"
-        app:cardBackgroundColor="#e6e6e6"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant"
         app:layout_constraintTop_toBottomOf="@id/tileCamera"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toStartOf="@id/tileSettings"
@@ -175,7 +135,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_menu_compass"
-                app:tint="#1B5E20"
+                app:tint="?attr/colorOnSurface"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/txtSensors"
                 app:layout_constraintStart_toStartOf="parent"
@@ -187,7 +147,7 @@
                 android:layout_height="wrap_content"
                 android:text="Senzorji"
                 android:textStyle="bold"
-                android:textColor="#1B5E20"
+                android:textColor="?attr/colorOnSurface"
                 app:layout_constraintTop_toBottomOf="@id/imgSensors"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -204,7 +164,7 @@
         android:clickable="true"
         android:focusable="true"
         android:foreground="?attr/selectableItemBackground"
-        app:cardBackgroundColor="#e6e6e6"
+        app:cardBackgroundColor="?attr/colorSurfaceVariant"
         app:layout_constraintTop_toBottomOf="@id/tileMap"
         app:layout_constraintStart_toEndOf="@id/tileSensors"
         app:layout_constraintEnd_toEndOf="parent"
@@ -221,7 +181,7 @@
                 android:layout_width="48dp"
                 android:layout_height="48dp"
                 android:src="@android:drawable/ic_menu_preferences"
-                app:tint="#1B5E20"
+                app:tint="?attr/colorOnSurface"
                 app:layout_constraintTop_toTopOf="parent"
                 app:layout_constraintBottom_toTopOf="@id/txtSettings"
                 app:layout_constraintStart_toStartOf="parent"
@@ -233,7 +193,7 @@
                 android:layout_height="wrap_content"
                 android:text="Nastavitve"
                 android:textStyle="bold"
-                android:textColor="#1B5E20"
+                android:textColor="?attr/colorOnSurface"
                 app:layout_constraintTop_toBottomOf="@id/imgSettings"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"

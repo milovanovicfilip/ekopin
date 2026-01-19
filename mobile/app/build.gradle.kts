@@ -32,9 +32,6 @@ android {
         buildConfigField("String", "GEOAPIFY_KEY", "\"$geoapifyKey\"")
         buildConfigField("String", "MQTT_HOST", "\"$mqttHost\"")
         buildConfigField("String", "MQTT_PORT", "\"$mqttPort\"")
-        ndk {
-            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
-        }
     }
 
     buildTypes {
@@ -61,8 +58,46 @@ android {
         }
         jniLibs {
             useLegacyPackaging = true
+            keepDebugSymbols += "**/*.so"
         }
     }
+}
+
+// Task to copy native libraries from JARs to jniLibs
+tasks.register("copyGdxNatives") {
+    doLast {
+        val nativesConfig = configurations.getByName("debugRuntimeClasspath")
+        val jniLibsDir = file("src/main/jniLibs")
+        
+        nativesConfig.resolvedConfiguration.resolvedArtifacts.forEach { artifact ->
+            if (artifact.moduleVersion.id.group == "com.badlogicgames.gdx" &&
+                artifact.moduleVersion.id.name == "gdx-platform" &&
+                artifact.classifier != null && artifact.classifier!!.startsWith("natives-")) {
+                
+                val classifier = artifact.classifier!!
+                val abiName = when (classifier) {
+                    "natives-armeabi-v7a" -> "armeabi-v7a"
+                    "natives-arm64-v8a" -> "arm64-v8a"
+                    "natives-x86" -> "x86"
+                    "natives-x86_64" -> "x86_64"
+                    else -> return@forEach
+                }
+                
+                val abiDir = file("$jniLibsDir/$abiName")
+                abiDir.mkdirs()
+                
+                copy {
+                    from(zipTree(artifact.file))
+                    into(abiDir)
+                    include("*.so")
+                }
+            }
+        }
+    }
+}
+
+tasks.named("preBuild").configure {
+    dependsOn("copyGdxNatives")
 }
 
 dependencies {
@@ -92,11 +127,19 @@ dependencies {
     val gdxVersion = "1.12.1"
     implementation("com.badlogicgames.gdx:gdx:$gdxVersion")
     implementation("com.badlogicgames.gdx:gdx-backend-android:$gdxVersion")
-    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
-    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
-    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
-    runtimeOnly("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-armeabi-v7a")
+    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-arm64-v8a")
+    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86")
+    implementation("com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-x86_64")
+
+    implementation("org.osmdroid:osmdroid-android:6.1.18")
 
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation("com.github.hannesa2:paho.mqtt.android:4.2.3")
+
+    // Retrofit and okhttp for HTTP requests
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 }

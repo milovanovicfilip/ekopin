@@ -1,4 +1,4 @@
-package com.example.mobile.util.temperature
+package com.example.mobile.util.geiger
 
 import android.annotation.SuppressLint
 import android.content.Context
@@ -20,9 +20,10 @@ import java.util.Locale
 import java.util.Random
 
 @SuppressLint("StaticFieldLeak")
-object TemperatureCaptureManager {
-    private const val REAL_MODE_MIN_TEMP = -20.0
-    private const val REAL_MODE_MAX_TEMP = 80.0
+object GeigerCaptureManager {
+
+    private const val REAL_MODE_MIN_CPM = 0.0
+    private const val REAL_MODE_MAX_CPM = 320.0
 
     private var handler: Handler? = null
     private var captureRunnable: Runnable? = null
@@ -30,18 +31,18 @@ object TemperatureCaptureManager {
     private var context: Context? = null
     private var locationHelper: LocationHelper? = null
 
-    private var minTemp = -20.0
-    private var maxTemp = 80.0
+    private var minCpm = 0.0
+    private var maxCpm = 320.0
     private var frequencyValue = 10
     private var frequencyUnit = "minut"
 
     private val random = Random()
     private val scope = CoroutineScope(Dispatchers.Main + Job())
 
-    @Volatile private var lastTemperature: Double? = null
+    @Volatile private var lastCpm: Double? = null
     @Volatile private var lastTimestamp: Long? = null
     
-    fun getLastTemperature(): Double? = lastTemperature
+    fun getLastCpm(): Double? = lastCpm
     fun getLastTimestamp(): Long? = lastTimestamp
 
     private var publisher: ((topic: String, payload: String) -> Unit)? = null
@@ -63,28 +64,28 @@ object TemperatureCaptureManager {
     fun startCapturing(
         frequencyValue: Int,
         frequencyUnit: String,
-        minTemp: Double,
-        maxTemp: Double
+        minCpm: Double,
+        maxCpm: Double
     ) {
         if (handler == null || context == null) return
-        if (minTemp >= maxTemp) return
+        if (minCpm >= maxCpm) return
 
         stopCapturing()
 
         this.frequencyValue = frequencyValue
         this.frequencyUnit = frequencyUnit
-        this.minTemp = minTemp
-        this.maxTemp = maxTemp
+        this.minCpm = minCpm
+        this.maxCpm = maxCpm
         this.isCapturing = true
 
-        captureTemperature()
+        captureGeiger()
 
         val intervalMillis = computeIntervalMillis(frequencyValue, frequencyUnit)
 
         captureRunnable = object : Runnable {
             override fun run() {
                 if (isCapturing) {
-                    captureTemperature()
+                    captureGeiger()
                     handler?.postDelayed(this, intervalMillis)
                 }
             }
@@ -120,7 +121,7 @@ object TemperatureCaptureManager {
         }
     }
 
-    private fun captureTemperature() {
+    private fun captureGeiger() {
         val ctx = context ?: return
         val locHelper = locationHelper ?: return
 
@@ -147,31 +148,31 @@ object TemperatureCaptureManager {
                 locHelper.getCurrentLocation()
             }
 
-            val effectiveMinTemp = if (isSimMode) minTemp else REAL_MODE_MIN_TEMP
-            val effectiveMaxTemp = if (isSimMode) maxTemp else REAL_MODE_MAX_TEMP
+            val effectiveMinCpm = if (isSimMode) minCpm else REAL_MODE_MIN_CPM
+            val effectiveMaxCpm = if (isSimMode) maxCpm else REAL_MODE_MAX_CPM
             
-            val temperature = effectiveMinTemp + (effectiveMaxTemp - effectiveMinTemp) * random.nextDouble()
+            val cpm = effectiveMinCpm + (effectiveMaxCpm - effectiveMinCpm) * random.nextDouble()
             val timestamp = System.currentTimeMillis()
-            lastTemperature = temperature
+            lastCpm = cpm
             lastTimestamp = timestamp
 
-            val tempFormatted = String.Companion.format(Locale.getDefault(), "%.2f", temperature)
+            val cpmFormatted = String.Companion.format(Locale.getDefault(), "%.2f", cpm)
 
             SensorDataLogger.logSensorData(
-                sensorType = ctx.getString(R.string.sensor_temperature),
-                value = "$tempFormatted ${ctx.getString(R.string.temperature_unit)}",
+                sensorType = ctx.getString(R.string.sensor_geiger),
+                value = "$cpmFormatted ${ctx.getString(R.string.geiger_unit)}",
                 location = location
             )
 
             val deviceId = Build.MODEL ?: "android"
             
             val mode = if (isSimMode) "sim" else "real"
-            val topic = "ekopin/$mode/temperature/add"
+            val topic = "ekopin/$mode/geiger/add"
 
             val payload = JSONObject().apply {
                 put("deviceId", deviceId)
                 put("ts", System.currentTimeMillis())
-                put("value", temperature)
+                put("value", cpm)
                 if (location != null) {
                     put("lat", location.latitude)
                     put("lng", location.longitude)
@@ -181,14 +182,13 @@ object TemperatureCaptureManager {
 
             publisher?.invoke(topic, payload)
 
-            // Check for extreme temperature and publish pollution_tag
-            if (temperature > 50.0 && location != null) {
-                publishExtremeTemperatureAlert(ctx, mode, location, temperature)
+            if (cpm > 300.0 && location != null) {
+                publishExtremeRadiationAlert(ctx, mode, location, cpm)
             }
         }
     }
 
-    private fun publishExtremeTemperatureAlert(ctx: Context, mode: String, location: Location, temperature: Double) {
+    private fun publishExtremeRadiationAlert(ctx: Context, mode: String, location: Location, cpm: Double) {
         val deviceId = Build.MODEL ?: "android"
         val topic = "ekopin/$mode/pollution_tags/add"
         
@@ -196,9 +196,9 @@ object TemperatureCaptureManager {
         
         val payload = JSONObject().apply {
             put("deviceId", deviceId)
-            put("label", "Izjemno visoka temperatura zaznana")
-            put("description", "Možna nevarnost po požaru ali sproščanja toksinov. Zaznana temperatura: ${String.format(Locale.getDefault(), "%.1f", temperature)}°C")
-            put("severity", "Srednja")
+            put("label", "Izjemno visoka količina radioaktivnega sevanja zaznana")
+            put("description", "Možna nevarnost po radioaktivni zastrupitvi. Zaznana radioaktivnost: ${String.format(Locale.getDefault(), "%.1f", cpm)} CPM")
+            put("severity", "Visoka")
             put("lat", location.latitude)
             put("lng", location.longitude)
             put("ts", System.currentTimeMillis())
@@ -210,7 +210,7 @@ object TemperatureCaptureManager {
         }.toString()
         
         publisher?.invoke(topic, payload)
-        android.util.Log.d("TemperatureCapture", "Published extreme temperature alert: $temperature°C at (${location.latitude}, ${location.longitude})")
+        android.util.Log.d("GeigerCapture", "Published extreme radiation alert: $cpm CPM at (${location.latitude}, ${location.longitude})")
     }
 
     private fun encodeDefaultImage(ctx: Context): String? {
@@ -223,19 +223,19 @@ object TemperatureCaptureManager {
                 android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
             } else null
         } catch (e: Exception) {
-            android.util.Log.e("TemperatureCapture", "Failed to encode default image", e)
+            android.util.Log.e("GeigerCapture", "Failed to encode default image", e)
             null
         }
     }
 
-    fun getCurrentSettings(): TemperatureSettings {
-        return TemperatureSettings(frequencyValue, frequencyUnit, minTemp, maxTemp)
+    fun getCurrentSettings(): GeigerSettings {
+        return GeigerSettings(frequencyValue, frequencyUnit, minCpm, maxCpm)
     }
 
-    data class TemperatureSettings(
+    data class GeigerSettings(
         val frequencyValue: Int,
         val frequencyUnit: String,
-        val minTemp: Double,
-        val maxTemp: Double
+        val minCpm: Double,
+        val maxCpm: Double
     )
 }

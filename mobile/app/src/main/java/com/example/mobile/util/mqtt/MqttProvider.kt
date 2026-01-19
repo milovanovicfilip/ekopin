@@ -5,4 +5,5 @@ object MqttProvider {
 
     @Volatile var globalSubsInstalled: Boolean = false
     @Volatile var tempNotifierInstalled: Boolean = false
+    @Volatile var geigerNotifierInstalled: Boolean = false
 }

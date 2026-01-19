@@ -71,14 +71,6 @@ object SensorDataLogger {
         Log.i(TAG, logMessage)
     }
 
-    /**
-        TODO(v navodilih):
-        Aplikacija mora imeti vmesnik za objavljanje poljubnih sporočil, ki ponazarjajo dogodke v vašem
-        digitalnem dvojčku (npr. prometna nesreča na Koroški cesti 11). Vsako sporočilo mora vključevati
-        čas in lokacijo. Dogodke lahko shranjujete v podatkovno bazo ali v verigo blokov (Blockchain). Vsak
-        dogodek naj bo objavljen pod določeno temo, podobno kot pri protokolu MQTT (npr. weather/temperature),
-        kar omogoča filtriranje sporočil
-     **/
     fun logMessage(message: String, location: Location? = null) {
         val timestamp = dateFormat.format(Date())
         val locationStr = if (location != null) {

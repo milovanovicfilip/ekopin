@@ -83,6 +83,44 @@
             android:src="@drawable/user" />
     </LinearLayout>
 
+    <!-- ZOOM CONTROLS -->
+    <LinearLayout
+        android:id="@+id/zoom_controls"
+        android:layout_width="56dp"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="12dp"
+        android:layout_marginBottom="20dp"
+        android:background="@drawable/bg_sqircle_white"
+        android:orientation="vertical"
+        android:padding="0dp"
+        android:elevation="6dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottom_bar">
+
+        <Button
+            android:id="@+id/btn_zoom_in"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_group_top"
+            android:contentDescription="Zoom In"
+            android:text="+"
+            android:textSize="24sp"
+            android:textColor="?attr/colorOnSurface"
+            style="?attr/borderlessButtonStyle" />
+
+        <Button
+            android:id="@+id/btn_zoom_out"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:background="@drawable/bg_group_bottom"
+            android:contentDescription="Zoom Out"
+            android:text="-"
+            android:textSize="24sp"
+            android:textColor="?attr/colorOnSurface"
+            style="?attr/borderlessButtonStyle" />
+
+    </LinearLayout>
+
     <!-- LEFT -->
     <LinearLayout
         android:id="@+id/left_buttons"

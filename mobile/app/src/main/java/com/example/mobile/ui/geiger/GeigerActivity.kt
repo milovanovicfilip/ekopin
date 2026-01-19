@@ -1,4 +1,4 @@
-package com.example.mobile.ui.temperature
+package com.example.mobile.ui.geiger
 
 import android.Manifest
 import android.content.pm.PackageManager
@@ -15,17 +15,17 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.example.mobile.BuildConfig
 import com.example.mobile.R
-import com.example.mobile.databinding.ActivityTemperatureBinding
-import com.example.mobile.util.temperature.TemperatureCaptureManager
+import com.example.mobile.databinding.ActivityGeigerBinding
+import com.example.mobile.util.geiger.GeigerCaptureManager
 import com.example.mobile.util.mqtt.MqttManager
 import com.example.mobile.util.SimPrefs
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class TemperatureActivity : AppCompatActivity() {
+class GeigerActivity : AppCompatActivity() {
 
-    private lateinit var binding: ActivityTemperatureBinding
+    private lateinit var binding: ActivityGeigerBinding
 
     private val dateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     private val handler = Handler(Looper.getMainLooper())
@@ -38,7 +38,7 @@ class TemperatureActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
-        binding = ActivityTemperatureBinding.inflate(layoutInflater)
+        binding = ActivityGeigerBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
@@ -47,12 +47,12 @@ class TemperatureActivity : AppCompatActivity() {
             insets
         }
 
-        TemperatureCaptureManager.initialize(this)
+        GeigerCaptureManager.initialize(this)
 
         mqttManager = MqttManager(this, serverUri)
         mqttManager.connect(
             onConnected = {
-                TemperatureCaptureManager.setPublisher { topic, payload ->
+                GeigerCaptureManager.setPublisher { topic, payload ->
                     mqttManager.publish(
                         topic = topic,
                         payload = payload,
@@ -82,18 +82,18 @@ class TemperatureActivity : AppCompatActivity() {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
         binding.spUnit.adapter = adapter
 
-        val settings = TemperatureCaptureManager.getCurrentSettings()
+        val settings = GeigerCaptureManager.getCurrentSettings()
         binding.etFrequency.setText(settings.frequencyValue.toString())
         
         val isSimMode = SimPrefs.isEnabled(this)
         if (isSimMode) {
-            binding.etMinTemp.setText(settings.minTemp.toString())
-            binding.etMaxTemp.setText(settings.maxTemp.toString())
-            binding.etMinTemp.visibility = View.VISIBLE
-            binding.etMaxTemp.visibility = View.VISIBLE
+            binding.etMinCpm.setText(settings.minCpm.toString())
+            binding.etMaxCpm.setText(settings.maxCpm.toString())
+            binding.etMinCpm.visibility = View.VISIBLE
+            binding.etMaxCpm.visibility = View.VISIBLE
         } else {
-            binding.etMinTemp.visibility = View.GONE
-            binding.etMaxTemp.visibility = View.GONE
+            binding.etMinCpm.visibility = View.GONE
+            binding.etMaxCpm.visibility = View.GONE
         }
 
         val unitIndex = when (settings.frequencyUnit.trim().lowercase(Locale.getDefault())) {
@@ -124,11 +124,11 @@ class TemperatureActivity : AppCompatActivity() {
         val frequencyUnit = binding.spUnit.selectedItem.toString()
         
         val isSimMode = SimPrefs.isEnabled(this)
-        val minTemp = if (isSimMode) binding.etMinTemp.text.toString().toDoubleOrNull() ?: -20.0 else -20.0
-        val maxTemp = if (isSimMode) binding.etMaxTemp.text.toString().toDoubleOrNull() ?: 36.0 else 80.0
+        val minCpm = if (isSimMode) binding.etMinCpm.text.toString().toDoubleOrNull() ?: 0.0 else 0.0
+        val maxCpm = if (isSimMode) binding.etMaxCpm.text.toString().toDoubleOrNull() ?: 100.0 else 320.0
 
-        if (minTemp >= maxTemp) {
-            Toast.makeText(this, getString(R.string.error_temp_range), Toast.LENGTH_SHORT).show()
+        if (minCpm >= maxCpm) {
+            Toast.makeText(this, getString(R.string.error_cpm_range), Toast.LENGTH_SHORT).show()
             return
         }
 
@@ -137,23 +137,23 @@ class TemperatureActivity : AppCompatActivity() {
             return
         }
 
-        TemperatureCaptureManager.startCapturing(
+        GeigerCaptureManager.startCapturing(
             frequencyValue = frequencyValue,
             frequencyUnit = frequencyUnit,
-            minTemp = minTemp,
-            maxTemp = maxTemp
+            minCpm = minCpm,
+            maxCpm = maxCpm
         )
 
         updateUIState()
     }
 
     private fun stopCapturing() {
-        TemperatureCaptureManager.stopCapturing()
+        GeigerCaptureManager.stopCapturing()
         updateUIState()
     }
 
     private fun updateUIState() {
-        val isCapturing = TemperatureCaptureManager.isCapturing()
+        val isCapturing = GeigerCaptureManager.isCapturing()
         val isSimMode = SimPrefs.isEnabled(this)
         
         binding.btnStart.isEnabled = !isCapturing
@@ -162,27 +162,27 @@ class TemperatureActivity : AppCompatActivity() {
         binding.spUnit.isEnabled = !isCapturing
         
         if (isSimMode) {
-            binding.etMinTemp.isEnabled = !isCapturing
-            binding.etMaxTemp.isEnabled = !isCapturing
+            binding.etMinCpm.isEnabled = !isCapturing
+            binding.etMaxCpm.isEnabled = !isCapturing
         }
     }
 
     private fun startUIUpdate() {
         updateRunnable = object : Runnable {
             override fun run() {
-                updateTemperatureDisplay()
+                updateGeigerDisplay()
                 handler.postDelayed(this, 1000)
             }
         }
         handler.post(updateRunnable!!)
     }
 
-    private fun updateTemperatureDisplay() {
-        val t = TemperatureCaptureManager.getLastTemperature()
-        val ts = TemperatureCaptureManager.getLastTimestamp()
-        if (t != null) {
-            val tempFormatted = String.format(Locale.getDefault(), "%.2f", t)
-            binding.tvCurrentTemp.text = "$tempFormatted ${getString(R.string.temperature_unit)}"
+    private fun updateGeigerDisplay() {
+        val cpm = GeigerCaptureManager.getLastCpm()
+        val ts = GeigerCaptureManager.getLastTimestamp()
+        if (cpm != null) {
+            val cpmFormatted = String.format(Locale.getDefault(), "%.2f", cpm)
+            binding.tvCurrentCpm.text = "$cpmFormatted ${getString(R.string.geiger_unit)}"
             
             if (ts != null) {
                 binding.tvLastUpdate.text = getString(R.string.last_update, dateFormat.format(Date(ts)))

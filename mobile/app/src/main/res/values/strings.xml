@@ -58,6 +58,17 @@
 
     <string name="sensor_temperature">Temperature</string>
     <string name="sensor_camera">Camera</string>
+    <string name="sensor_geiger">Geiger</string>
+
+    <string name="geiger_sensor">Geiger Counter</string>
+    <string name="current_radiation">Trenutna radiacija:</string>
+    <string name="geiger_unit">CPM</string>
+    <string name="geiger_range">Razpon CPM:</string>
+    <string name="min_cpm_hint">Min (0)</string>
+    <string name="max_cpm_hint">Max (100)</string>
+    <string name="geiger_capture_started">Začeto zajemanje radiacije vsakih %1$d %2$s</string>
+    <string name="geiger_capture_stopped">Ustavljeno zajemanje radiacije</string>
+    <string name="error_cpm_range">Minimalna vrednost CPM mora biti manjša od maksimalne</string>
 
     <string name="location_not_available">Lokacija ni na voljo</string>
     <string name="location_unknown_short">Neznana</string>
@@ -71,4 +82,35 @@
     <string name="location_na">N/A</string>
 
     <string name="simulation_toggle">Simulacija</string>
+
+    <!-- Settings -->
+    <string name="theme_settings">Nastavitve teme</string>
+    <string name="select_theme">Izberi temo:</string>
+    <string name="theme_light">Svetla tema</string>
+    <string name="theme_dark">Temna tema</string>
+    <string name="theme_system">Sistemska tema</string>
+    <string name="apply_theme">Uporabi temo</string>
+    
+    <string name="sim_location_settings">Nastavitve simulirane lokacije</string>
+    <string name="sim_location_label">Simulirana lokacija:</string>
+    <string name="sim_location_hint">npr. Koroška cesta 46, Maribor</string>
+    <string name="save_location">Shrani lokacijo</string>
+    <string name="location_saved">✓ Lokacija shranjena</string>
+    <string name="pick_location_on_map">📍 Izberi lokacijo na zemljevidu</string>
+    <string name="no_location_set">Ni nastavljene lokacije</string>
+    
+    <!-- Location Picker Dialog -->
+    <string name="select_location">Izberi lokacijo</string>
+    <string name="manual_coordinates">Vnesi koordinate:</string>
+    <string name="latitude">Širina (Latitude)</string>
+    <string name="longitude">Dolžina (Longitude)</string>
+    <string name="set_coordinates">Nastavi koordinate</string>
+    <string name="cancel">Prekliči</string>
+    <string name="confirm">Potrdi</string>
+    
+    <!-- POI and Analysis -->
+    <string name="loading_poi_data">Nalagam podatke POI...</string>
+    <string name="poi_loading_error">Napaka pri nalaganju POI podatkov</string>
+    <string name="analysis_complete">Analiza je bila uspešna</string>
+    <string name="analysis_failed">Analiza je bila neuspešna</string>
 </resources>

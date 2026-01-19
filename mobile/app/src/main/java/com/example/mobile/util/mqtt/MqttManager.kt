@@ -62,8 +62,8 @@ class MqttManager(
         val options = MqttConnectOptions().apply {
             isAutomaticReconnect = true
             isCleanSession = true
-            connectionTimeout = 10
-            keepAliveInterval = 20
+            connectionTimeout = 30
+            keepAliveInterval = 60
         }
 
         Log.d(TAG, "Connecting to ${client.serverURI} ...")

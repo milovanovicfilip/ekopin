@@ -8,7 +8,11 @@ import com.example.mobile.R
 import com.example.mobile.data.model.Sensor
 import com.example.mobile.databinding.ActivitySensorsBinding
 import com.example.mobile.ui.camera.CameraActivity
+import com.example.mobile.ui.geiger.GeigerActivity
 import com.example.mobile.ui.temperature.TemperatureActivity
+import com.example.mobile.util.SimPrefs
+import com.example.mobile.util.geiger.GeigerCaptureManager
+import com.example.mobile.util.mqtt.MqttProvider
 import com.example.mobile.util.temperature.TemperatureCaptureManager
 import java.util.Locale
 
@@ -23,6 +27,18 @@ class SensorsActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         TemperatureCaptureManager.initialize(this)
+        GeigerCaptureManager.initialize(this)
+
+        // Setup MQTT publishers
+        val mqtt = MqttProvider.mqtt
+        if (mqtt != null) {
+            TemperatureCaptureManager.setPublisher { topic, payload ->
+                mqtt.publish(topic = topic, payload = payload, qos = 1, retained = false, onError = { })
+            }
+            GeigerCaptureManager.setPublisher { topic, payload ->
+                mqtt.publish(topic = topic, payload = payload, qos = 1, retained = false, onError = { })
+            }
+        }
 
         binding.rvSensors.layoutManager = LinearLayoutManager(this)
 
@@ -31,23 +47,40 @@ class SensorsActivity : AppCompatActivity() {
             onClick = { sensor ->
                 when (sensor.name) {
                     getString(R.string.sensor_temperature) -> startActivity(Intent(this, TemperatureActivity::class.java))
+                    getString(R.string.sensor_geiger) -> startActivity(Intent(this, GeigerActivity::class.java))
                     getString(R.string.sensor_camera) -> startActivity(Intent(this, CameraActivity::class.java))
                 }
             },
             onToggle = { sensor, isChecked ->
-                if (sensor.name == getString(R.string.sensor_temperature)) {
-                    if (isChecked) {
-                        val s = TemperatureCaptureManager.getCurrentSettings()
-                        TemperatureCaptureManager.startCapturing(
-                            frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
-                            frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
-                            minTemp = s.minTemp,
-                            maxTemp = s.maxTemp
-                        )
-                    } else {
-                        TemperatureCaptureManager.stopCapturing()
+                when (sensor.name) {
+                    getString(R.string.sensor_temperature) -> {
+                        if (isChecked) {
+                            val s = TemperatureCaptureManager.getCurrentSettings()
+                            TemperatureCaptureManager.startCapturing(
+                                frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
+                                frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
+                                minTemp = s.minTemp,
+                                maxTemp = s.maxTemp
+                            )
+                        } else {
+                            TemperatureCaptureManager.stopCapturing()
+                        }
+                        refreshList()
                     }
-                    refreshList()
+                    getString(R.string.sensor_geiger) -> {
+                        if (isChecked) {
+                            val s = GeigerCaptureManager.getCurrentSettings()
+                            GeigerCaptureManager.startCapturing(
+                                frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
+                                frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
+                                minCpm = s.minCpm,
+                                maxCpm = s.maxCpm
+                            )
+                        } else {
+                            GeigerCaptureManager.stopCapturing()
+                        }
+                        refreshList()
+                    }
                 }
             }
         )
@@ -70,23 +103,40 @@ class SensorsActivity : AppCompatActivity() {
             onClick = { sensor ->
                 when (sensor.name) {
                     getString(R.string.sensor_temperature) -> startActivity(Intent(this, TemperatureActivity::class.java))
+                    getString(R.string.sensor_geiger) -> startActivity(Intent(this, GeigerActivity::class.java))
                     getString(R.string.sensor_camera) -> startActivity(Intent(this, CameraActivity::class.java))
                 }
             },
             onToggle = { sensor, isChecked ->
-                if (sensor.name == getString(R.string.sensor_temperature)) {
-                    if (isChecked) {
-                        val s = TemperatureCaptureManager.getCurrentSettings()
-                        TemperatureCaptureManager.startCapturing(
-                            frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
-                            frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
-                            minTemp = s.minTemp,
-                            maxTemp = s.maxTemp
-                        )
-                    } else {
-                        TemperatureCaptureManager.stopCapturing()
+                when (sensor.name) {
+                    getString(R.string.sensor_temperature) -> {
+                        if (isChecked) {
+                            val s = TemperatureCaptureManager.getCurrentSettings()
+                            TemperatureCaptureManager.startCapturing(
+                                frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
+                                frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
+                                minTemp = s.minTemp,
+                                maxTemp = s.maxTemp
+                            )
+                        } else {
+                            TemperatureCaptureManager.stopCapturing()
+                        }
+                        refreshList()
                     }
-                    refreshList()
+                    getString(R.string.sensor_geiger) -> {
+                        if (isChecked) {
+                            val s = GeigerCaptureManager.getCurrentSettings()
+                            GeigerCaptureManager.startCapturing(
+                                frequencyValue = if (s.frequencyValue > 0) s.frequencyValue else 10,
+                                frequencyUnit = if (s.frequencyUnit.isNotBlank()) s.frequencyUnit else getString(R.string.minute),
+                                minCpm = s.minCpm,
+                                maxCpm = s.maxCpm
+                            )
+                        } else {
+                            GeigerCaptureManager.stopCapturing()
+                        }
+                        refreshList()
+                    }
                 }
             }
         )
@@ -94,25 +144,56 @@ class SensorsActivity : AppCompatActivity() {
     }
 
     private fun buildSensorsList(): List<Sensor> {
-        val settings = TemperatureCaptureManager.getCurrentSettings()
-        val isCapturing = TemperatureCaptureManager.isCapturing()
+        val isSimMode = SimPrefs.isEnabled(this)
+        
+        val tempSettings = TemperatureCaptureManager.getCurrentSettings()
+        val isTempCapturing = TemperatureCaptureManager.isCapturing()
 
-        val rangeText = String.format(
-            Locale.getDefault(),
-            "↝ Od %.2f do %.2f",
-            settings.minTemp,
-            settings.maxTemp
-        )
+        // V real mode ne prikazujemo razpona (hard-coded)
+        val tempRangeText = if (isSimMode) {
+            String.format(
+                Locale.getDefault(),
+                "↝ Od %.2f do %.2f",
+                tempSettings.minTemp,
+                tempSettings.maxTemp
+            )
+        } else {
+            "" // Prazen string za real mode
+        }
 
-        val frequencyText = "⏱ Vsakih ${settings.frequencyValue} ${prettyUnit(settings.frequencyValue, settings.frequencyUnit)}"
+        val tempFrequencyText = "⏱ Vsakih ${tempSettings.frequencyValue} ${prettyUnit(tempSettings.frequencyValue, tempSettings.frequencyUnit)}"
+
+        val geigerSettings = GeigerCaptureManager.getCurrentSettings()
+        val isGeigerCapturing = GeigerCaptureManager.isCapturing()
+
+        // V real mode ne prikazujemo razpona (hard-coded)
+        val geigerRangeText = if (isSimMode) {
+            String.format(
+                Locale.getDefault(),
+                "↝ Od %.2f do %.2f CPM",
+                geigerSettings.minCpm,
+                geigerSettings.maxCpm
+            )
+        } else {
+            "" // Prazen string za real mode
+        }
+
+        val geigerFrequencyText = "⏱ Vsakih ${geigerSettings.frequencyValue} ${prettyUnit(geigerSettings.frequencyValue, geigerSettings.frequencyUnit)}"
 
         return listOf(
             Sensor(
                 name = getString(R.string.sensor_temperature),
-                range = rangeText,
-                frequency = frequencyText,
+                range = tempRangeText,
+                frequency = tempFrequencyText,
                 location = "Koroška cesta 46, Maribor",
-                enabled = isCapturing
+                enabled = isTempCapturing
+            ),
+            Sensor(
+                name = getString(R.string.sensor_geiger),
+                range = geigerRangeText,
+                frequency = geigerFrequencyText,
+                location = "Koroška cesta 46, Maribor",
+                enabled = isGeigerCapturing
             ),
             Sensor(
                 name = getString(R.string.sensor_camera),

@@ -27,8 +27,8 @@ class MapGdxApp(
     private val style = "osm-carto"
 
     private var zoom = 14
-    private var centerLat = 46.056946f
-    private var centerLon = 14.505751f
+    private var centerLat = 46.5547f
+    private var centerLon = 15.6459f
 
     private val tileSize = 256f
 
@@ -118,14 +118,19 @@ class MapGdxApp(
     }
 
     fun setDots(newDots: List<Triple<String, Float, Float>>) {
+        //android.util.Log.d("MapGdxApp", "setDots called with ${newDots.size} dots")
         dots.clear()
         for ((id, lat, lon) in newDots) {
+            //android.util.Log.d("MapGdxApp", "Adding dot: id=$id, lat=$lat, lon=$lon")
             dots[id] = Dot(id, lat, lon)
         }
+        //android.util.Log.d("MapGdxApp", "Total dots after setDots: ${dots.size}")
     }
 
     fun addDot(id: String, lat: Float, lon: Float) {
+        //android.util.Log.d("MapGdxApp", "addDot: id=$id, lat=$lat, lon=$lon")
         dots[id] = Dot(id, lat, lon)
+        //android.util.Log.d("MapGdxApp", "Total dots: ${dots.size}")
     }
 
     fun removeDot(id: String) {
@@ -133,21 +138,28 @@ class MapGdxApp(
     }
 
     private fun drawDots() {
-        if (dots.isEmpty()) return
+        if (dots.isEmpty()) {
+            return
+        }
 
         val (centerPx, centerPy) = latLonToPixel(centerLat.toDouble(), centerLon.toDouble(), zoom)
         val halfW = Gdx.graphics.width / 2f
         val halfH = Gdx.graphics.height / 2f
 
+        //android.util.Log.d("MapGdxApp", "drawDots: rendering ${dots.size} dots, center=($centerLat, $centerLon), zoom=$zoom")
+
         for (d in dots.values) {
             val (pX, pY) = latLonToPixel(d.lat.toDouble(), d.lon.toDouble(), zoom)
             val screenX = (pX - centerPx) + halfW
-            val screenY = halfH - (pY - centerPy)
+            val screenY = (pY - centerPy) + halfH
+            val yFlipped = Gdx.graphics.height - screenY
+
+            //android.util.Log.d("MapGdxApp", "  Dot ${d.id}: world=($pX, $pY), screen=($screenX, $yFlipped)")
 
             batch.draw(
                 greenTex,
                 screenX - dotDrawSize / 2f,
-                screenY - dotDrawSize / 2f,
+                yFlipped - dotDrawSize / 2f,
                 dotDrawSize,
                 dotDrawSize
             )
@@ -555,6 +567,14 @@ class MapGdxApp(
         val t = Texture(pm)
         pm.dispose()
         return t
+    }
+
+    fun zoomIn() {
+        changeZoom(1)
+    }
+
+    fun zoomOut() {
+        changeZoom(-1)
     }
 
     override fun dispose() {

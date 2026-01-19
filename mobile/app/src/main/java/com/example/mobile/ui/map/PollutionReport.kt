@@ -163,7 +163,23 @@ class PollutionReportActivity : AppCompatActivity() {
         resolver: ContentResolver,
         uri: Uri?
     ): Pair<String?, String?> {
-        if (uri == null) return null to null
+        if (uri == null) {
+            return try {
+                val bmp = BitmapFactory.decodeResource(resources, com.example.mobile.R.drawable.eventpic)
+                if (bmp != null) {
+                    val scaled = scaleDown(bmp, 1280)
+                    val out = ByteArrayOutputStream()
+                    scaled.compress(Bitmap.CompressFormat.JPEG, 80, out)
+                    val bytes = out.toByteArray()
+                    Base64.encodeToString(bytes, Base64.NO_WRAP) to "image/jpeg"
+                } else {
+                    null to null
+                }
+            } catch (e: Exception) {
+                Log.e("POLLUTION_REPORT", "Failed to encode default image", e)
+                null to null
+            }
+        }
 
         return try {
             val bmp = resolver.openInputStream(uri)?.use { input ->
