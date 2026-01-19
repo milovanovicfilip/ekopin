@@ -12,7 +12,7 @@ from pymongo import MongoClient
 
 app = Flask(__name__, static_folder='static/')
 
-client = MongoClient("mongodb+srv://milovanovic8filip:geslo123@cluster0.gsr8kmn.mongodb.net/test")
+client = MongoClient("MONGODB_CONNECTION_STRING")
 db = client["test"]
 
 poi_col = db["pois"]
