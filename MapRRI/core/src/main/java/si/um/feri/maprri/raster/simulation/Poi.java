@@ -16,10 +16,12 @@ public class Poi {
     public float fillRate = 0f;
     public float smell = 0f;
     public float temperature;
+    public String status;
 
     public boolean isEcoIsland;
 
     public List<Poi> binsInRange = new ArrayList<>();
+    public Array<SmellParticle> smellParticles = new Array<>();
 
     public Texture[] fillTextures;
     public Array<TrashParticle> particles;
