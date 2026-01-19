@@ -236,11 +236,30 @@ class CameraActivity : AppCompatActivity(), CoroutineScope {
     }
 
     private fun showAnalysis(r: AnalysisResponse) {
+        binding.cardResults.visibility = View.VISIBLE
+        
+        val statusText = when (r.status.lowercase()) {
+            "full" -> "POLN"
+            "empty" -> "PRAZEN"
+            else -> r.status.uppercase()
+        }
+        binding.tvResultStatus.text = statusText
+        
+        val percentage = (r.probability * 100).toInt()
+        binding.tvResultProbability.text = "$percentage%"
+
+        val color = when (r.status.lowercase()) {
+            "full" -> 0xFFF44336.toInt()
+            "empty" -> 0xFF4CAF50.toInt()
+            else -> 0xFFFF9800.toInt()
+        }
+        binding.tvResultProbability.setTextColor(color)
+
         val text = """
             Analiza:
             POI: ${r.poi_id}
             Status: ${r.status}
-            Verjetnost: ${(r.probability * 100).toInt()}%
+            Verjetnost: $percentage%
         """.trimIndent()
 
         addLog(text)
