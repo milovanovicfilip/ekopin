@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+    <title>Veriga blokov</title>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Veriga blokov</h1>
+        </header>
+        <section class="controls">
+            <div class="control-row">
+                <strong>Ime:</strong>
+                <input type="text" id="name-input" placeholder="Vnesite ime">
+                <button id="connect-button">Povezi</button>
+                <button id="mine-button">Rudari</button>
+            </div>
+        </section>
+        <section class="info-section">
+            <div id="peer-info">
+                <strong>Tvoj Peer ID:</strong> <span id="peer-id">Ni povezan</span>
+                <input value="Kopiraj" type="button" id="copy-button">
+            </div>
+        </section>
+        <section class="controls">
+            <div class="control-row">
+                <label for="peer-id-input">Povezi se na Peer:</label>
+                <input type="text" id="peer-id-input" placeholder="1hf3...">
+                <button id="connect-peer-button">Povezi peer</button>
+            </div>
+        </section>
+        <section class="ledger-section">
+            <div class="control-row">
+                <textarea name="" id="blocks-display">Blockchain ledger...</textarea>
+            </div>
+        </section>
+        <section class="ledger-section">
+            <div class="control-row">
+                <textarea name="connections" id="connections">Minning (every 50000th hash)...</textarea>
+            </div>
+        </section>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js" integrity="sha512-a+SUDuwNzXDvz4XrIcXHuCf089/iJAoN4lmrXJg18XnduKK6YlDHNRalv4yd1N40OKI80tFidF+rqTFKGPoWFQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>

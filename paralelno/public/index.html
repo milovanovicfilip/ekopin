@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="sl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Veriga blokov</h1>
+        </header>
+
+        <div class="status-panel">
+            <h2>Status</h2>
+            <div id="status" class="status-info">
+                <div class="status-item">
+                    <span class="label">Število blokov:</span>
+                    <span id="chainLength">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Težavnost:</span>
+                    <span id="difficulty">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Kumulativna težavnost:</span>
+                    <span id="cumulativeDifficulty">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Vozlišča:</span>
+                    <span id="worldSize">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Skupno niti:</span>
+                    <span id="totalThreads">-</span>
+                </div>
+                <div class="status-item">
+                    <span class="label">Veriga veljavna:</span>
+                    <span id="isValid">-</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button id="refreshBtn" class="btn btn-primary">Osveži verigo</button>
+            <button id="autoRefreshBtn" class="btn btn-secondary">Avtomatsko osveževanje</button>
+        </div>
+
+        
+        <div class="chain-panel">
+            <h2>Veriga blokov</h2>
+            <div id="chain" class="chain-container">
+                <p class="loading">Nalagam verigo...</p>
+            </div>
+        </div>
+    </div>
+
+<script src="app.js"></script>
+</body>
+</html>
