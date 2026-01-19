@@ -33,7 +33,7 @@
             android:layout_height="72dp"
             android:layout_marginBottom="16dp"
             android:backgroundTint="#FFFFFF"
-            android:text="📷"
+            android:text="◉"
             android:textSize="32sp"
             app:cornerRadius="36dp"
             app:layout_constraintTop_toTopOf="parent"

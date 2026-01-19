@@ -136,4 +136,10 @@ dependencies {
 
     implementation("org.eclipse.paho:org.eclipse.paho.client.mqttv3:1.2.5")
     implementation("com.github.hannesa2:paho.mqtt.android:4.2.3")
+
+    // Retrofit and okhttp for HTTP requests
+    implementation("com.squareup.retrofit2:retrofit:2.9.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
+    implementation("com.squareup.okhttp3:okhttp:4.11.0")
+    implementation("com.squareup.okhttp3:logging-interceptor:4.11.0")
 }

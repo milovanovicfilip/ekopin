@@ -107,4 +107,10 @@
     <string name="set_coordinates">Nastavi koordinate</string>
     <string name="cancel">Prekliči</string>
     <string name="confirm">Potrdi</string>
+    
+    <!-- POI and Analysis -->
+    <string name="loading_poi_data">Nalagam podatke POI...</string>
+    <string name="poi_loading_error">Napaka pri nalaganju POI podatkov</string>
+    <string name="analysis_complete">Analiza je bila uspešna</string>
+    <string name="analysis_failed">Analiza je bila neuspešna</string>
 </resources>
